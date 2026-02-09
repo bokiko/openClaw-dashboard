@@ -52,9 +52,17 @@ export async function POST(request: Request) {
       }, { status: 500 });
     }
 
+    // Schedule restart after response is sent
+    // Process managers (PM2, systemd, Docker) will auto-restart
+    // In dev mode, Next.js hot-reloads on file changes anyway
+    setTimeout(() => {
+      console.log('[update] Restarting server to apply changes...');
+      process.exit(0);
+    }, 1500);
+
     return NextResponse.json({
       status: 'updated',
-      message: 'Update complete — restart the server to apply changes',
+      message: 'Update applied — server restarting',
       steps,
     });
   } catch (error) {

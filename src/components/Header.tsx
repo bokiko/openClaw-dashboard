@@ -51,10 +51,12 @@ export default function Header({
         toast.info('Already up to date', { duration: 3000 });
       } else if (data.status === 'updated') {
         setUpdateStatus('updated');
-        toast.success('Update complete', {
-          description: 'Restart the server to apply changes',
+        toast.success('Update applied', {
+          description: 'Server restarting — page will reload shortly',
           duration: 5000,
         });
+        // Reload page after server has time to restart
+        setTimeout(() => window.location.reload(), 4000);
       } else {
         setUpdateStatus('error');
         toast.error('Update failed', {
