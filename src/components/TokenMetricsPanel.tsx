@@ -52,28 +52,25 @@ export function TokenMetricsPanel({ tokenStats }: TokenMetricsPanelProps) {
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      className="rounded-2xl overflow-hidden"
-      style={{
-        background: 'linear-gradient(135deg, rgba(33,34,37,0.8), rgba(24,25,27,0.9))',
-        backdropFilter: 'blur(12px)',
-        border: '1px solid rgba(255,255,255,0.06)',
-        boxShadow: '0 0 0 1px rgba(255,255,255,0.03), 0 2px 4px rgba(0,0,0,0.3), 0 8px 24px rgba(0,0,0,0.4)',
-      }}
+      className="card-premium rounded-2xl overflow-hidden"
     >
       {/* Header */}
       <button
         onClick={() => setIsExpanded(!isExpanded)}
-        className="w-full px-6 py-4 flex items-center justify-between hover:bg-white/[0.02] transition-colors"
+        className="w-full px-6 py-4 flex items-center justify-between transition-colors"
+        style={{ background: 'var(--surface-hover)' }}
+        onMouseEnter={e => e.currentTarget.style.background = 'var(--surface-active)'}
+        onMouseLeave={e => e.currentTarget.style.background = 'var(--surface-hover)'}
       >
         <div className="flex items-center gap-3">
-          <Activity className="w-5 h-5 text-[#3e63dd]" />
-          <h2 className="font-semibold text-white">Token Usage</h2>
+          <Activity className="w-5 h-5" style={{ color: 'var(--blue)' }} />
+          <h2 className="font-semibold text-foreground">Token Usage</h2>
         </div>
         <motion.div
           animate={{ rotate: isExpanded ? 180 : 0 }}
           transition={{ duration: 0.2 }}
         >
-          <ChevronDown className="w-5 h-5 text-[#697177]" />
+          <ChevronDown className="w-5 h-5 text-muted-foreground" />
         </motion.div>
       </button>
 
@@ -88,9 +85,9 @@ export function TokenMetricsPanel({ tokenStats }: TokenMetricsPanelProps) {
             {!tokenStats ? (
               /* Empty state */
               <div className="px-6 pb-6 text-center py-8">
-                <Activity className="w-8 h-8 text-[#697177]/50 mx-auto mb-3" />
-                <p className="text-sm text-[#697177]">No usage data yet</p>
-                <p className="text-xs text-[#697177]/60 mt-1">
+                <Activity className="w-8 h-8 text-muted-foreground/50 mx-auto mb-3" />
+                <p className="text-sm text-muted-foreground">No usage data yet</p>
+                <p className="text-xs text-muted-foreground/60 mt-1">
                   Token usage will appear here when tasks include usage data
                 </p>
               </div>
@@ -103,19 +100,19 @@ export function TokenMetricsPanel({ tokenStats }: TokenMetricsPanelProps) {
                       label: 'Total Tokens',
                       value: formatTokens(totalTokens),
                       icon: Layers,
-                      color: '#3e63dd',
+                      color: 'var(--blue)',
                     },
                     {
                       label: 'Input Tokens',
                       value: formatTokens(tokenStats.totalInputTokens),
                       icon: ArrowDownToLine,
-                      color: '#8e4ec6',
+                      color: 'var(--purple)',
                     },
                     {
                       label: 'Output Tokens',
                       value: formatTokens(tokenStats.totalOutputTokens),
                       icon: ArrowUpFromLine,
-                      color: '#46a758',
+                      color: 'var(--green)',
                     },
                   ].map((stat, index) => (
                     <motion.div
@@ -123,13 +120,19 @@ export function TokenMetricsPanel({ tokenStats }: TokenMetricsPanelProps) {
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ delay: index * 0.05 }}
-                      className="p-4 rounded-xl bg-white/[0.03] border border-white/[0.04] hover:border-white/[0.08] transition-colors"
+                      className="p-4 rounded-xl transition-colors"
+                      style={{
+                        background: 'var(--surface-subtle)',
+                        border: '1px solid var(--surface-card-border)',
+                      }}
+                      onMouseEnter={e => (e.currentTarget.style.borderColor = 'var(--surface-card-hover-border)')}
+                      onMouseLeave={e => (e.currentTarget.style.borderColor = 'var(--surface-card-border)')}
                     >
                       <div className="flex items-center justify-between mb-2">
                         <stat.icon className="w-4 h-4" style={{ color: stat.color }} />
                       </div>
-                      <p className="text-2xl font-bold text-white">{stat.value}</p>
-                      <p className="text-xs text-[#697177] mt-1">{stat.label}</p>
+                      <p className="text-2xl font-bold text-foreground">{stat.value}</p>
+                      <p className="text-xs text-muted-foreground mt-1">{stat.label}</p>
                     </motion.div>
                   ))}
                 </div>
@@ -140,11 +143,11 @@ export function TokenMetricsPanel({ tokenStats }: TokenMetricsPanelProps) {
                     <button
                       key={tab.id}
                       onClick={() => setActiveTab(tab.id)}
-                      className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors ${
-                        activeTab === tab.id
-                          ? 'bg-white/[0.08] text-white'
-                          : 'text-[#697177] hover:text-[#b0b4ba] hover:bg-white/[0.03]'
-                      }`}
+                      className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors"
+                      style={activeTab === tab.id
+                        ? { background: 'var(--surface-active)', color: 'var(--foreground)' }
+                        : { color: 'hsl(var(--muted-foreground))' }
+                      }
                     >
                       {tab.label}
                     </button>
@@ -166,33 +169,35 @@ export function TokenMetricsPanel({ tokenStats }: TokenMetricsPanelProps) {
                           <AreaChart data={tokenStats.dailyTokens}>
                             <defs>
                               <linearGradient id="inputGradient" x1="0" y1="0" x2="0" y2="1">
-                                <stop offset="5%" stopColor="#8e4ec6" stopOpacity={0.3} />
-                                <stop offset="95%" stopColor="#8e4ec6" stopOpacity={0} />
+                                <stop offset="5%" stopColor="var(--purple, #8e4ec6)" stopOpacity={0.3} />
+                                <stop offset="95%" stopColor="var(--purple, #8e4ec6)" stopOpacity={0} />
                               </linearGradient>
                               <linearGradient id="outputGradient" x1="0" y1="0" x2="0" y2="1">
-                                <stop offset="5%" stopColor="#46a758" stopOpacity={0.3} />
-                                <stop offset="95%" stopColor="#46a758" stopOpacity={0} />
+                                <stop offset="5%" stopColor="var(--green, #46a758)" stopOpacity={0.3} />
+                                <stop offset="95%" stopColor="var(--green, #46a758)" stopOpacity={0} />
                               </linearGradient>
                             </defs>
-                            <CartesianGrid strokeDasharray="3 3" stroke="#313538" vertical={false} />
+                            <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
                             <XAxis
                               dataKey="date"
-                              tick={{ fill: '#697177', fontSize: 12 }}
-                              axisLine={{ stroke: '#313538' }}
+                              tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }}
+                              axisLine={{ stroke: 'hsl(var(--border))' }}
                               tickLine={false}
                             />
                             <YAxis
-                              tick={{ fill: '#697177', fontSize: 12 }}
-                              axisLine={{ stroke: '#313538' }}
+                              tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }}
+                              axisLine={{ stroke: 'hsl(var(--border))' }}
                               tickLine={false}
                               tickFormatter={(v: number) => formatTokens(v)}
                             />
                             <Tooltip
                               contentStyle={{
-                                backgroundColor: '#18191b',
-                                border: '1px solid #313538',
-                                borderRadius: '8px',
-                                color: '#edeef0',
+                                backgroundColor: 'hsl(var(--card))',
+                                border: '1px solid hsl(var(--border))',
+                                borderRadius: '10px',
+                                color: 'hsl(var(--foreground))',
+                                padding: '8px 12px',
+                                fontSize: '13px',
                               }}
                               formatter={(value?: number, name?: string) => [
                                 formatTokens(value ?? 0),
@@ -203,7 +208,7 @@ export function TokenMetricsPanel({ tokenStats }: TokenMetricsPanelProps) {
                               type="monotone"
                               dataKey="input"
                               stackId="1"
-                              stroke="#8e4ec6"
+                              stroke="var(--purple, #8e4ec6)"
                               strokeWidth={2}
                               fill="url(#inputGradient)"
                             />
@@ -211,7 +216,7 @@ export function TokenMetricsPanel({ tokenStats }: TokenMetricsPanelProps) {
                               type="monotone"
                               dataKey="output"
                               stackId="1"
-                              stroke="#46a758"
+                              stroke="var(--green, #46a758)"
                               strokeWidth={2}
                               fill="url(#outputGradient)"
                             />
@@ -228,7 +233,7 @@ export function TokenMetricsPanel({ tokenStats }: TokenMetricsPanelProps) {
                         exit={{ opacity: 0 }}
                         className="h-[200px] flex items-center justify-center"
                       >
-                        <p className="text-sm text-[#697177]">No daily trend data available</p>
+                        <p className="text-sm text-muted-foreground">No daily trend data available</p>
                       </motion.div>
                     )}
 
@@ -242,28 +247,30 @@ export function TokenMetricsPanel({ tokenStats }: TokenMetricsPanelProps) {
                       >
                         <ResponsiveContainer width="100%" height="100%">
                           <BarChart data={tokenStats.tokensByModel} layout="vertical">
-                            <CartesianGrid strokeDasharray="3 3" stroke="#313538" horizontal={false} />
+                            <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" horizontal={false} />
                             <XAxis
                               type="number"
-                              tick={{ fill: '#697177', fontSize: 12 }}
-                              axisLine={{ stroke: '#313538' }}
+                              tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }}
+                              axisLine={{ stroke: 'hsl(var(--border))' }}
                               tickLine={false}
                               tickFormatter={(v: number) => formatTokens(v)}
                             />
                             <YAxis
                               type="category"
                               dataKey="model"
-                              tick={{ fill: '#b0b4ba', fontSize: 12 }}
+                              tick={{ fill: 'hsl(var(--foreground))', fontSize: 12 }}
                               axisLine={false}
                               tickLine={false}
                               width={100}
                             />
                             <Tooltip
                               contentStyle={{
-                                backgroundColor: '#18191b',
-                                border: '1px solid #313538',
-                                borderRadius: '8px',
-                                color: '#edeef0',
+                                backgroundColor: 'hsl(var(--card))',
+                                border: '1px solid hsl(var(--border))',
+                                borderRadius: '10px',
+                                color: 'hsl(var(--foreground))',
+                                padding: '8px 12px',
+                                fontSize: '13px',
                               }}
                               formatter={(value?: number, name?: string) => [
                                 formatTokens(value ?? 0),
@@ -293,7 +300,7 @@ export function TokenMetricsPanel({ tokenStats }: TokenMetricsPanelProps) {
                         exit={{ opacity: 0 }}
                         className="h-[200px] flex items-center justify-center"
                       >
-                        <p className="text-sm text-[#697177]">No model breakdown available</p>
+                        <p className="text-sm text-muted-foreground">No model breakdown available</p>
                       </motion.div>
                     )}
                   </AnimatePresence>
