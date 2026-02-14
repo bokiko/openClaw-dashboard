@@ -1,12 +1,11 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import {
-  Activity, Zap, Command, Github, Download, Check, Loader2, AlertCircle,
+  Activity, Zap, Command, Github, Download, Check, Loader2,
   Brain, Bot, Flame, Shield, Cpu, Rocket, Sparkles, Eye, type LucideIcon,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { toast } from 'sonner';
 
 const LOGO_ICONS: Record<string, LucideIcon> = {
   zap: Zap, brain: Brain, bot: Bot, flame: Flame, shield: Shield,
@@ -28,7 +27,13 @@ interface HeaderProps {
   accentColor?: string;
 }
 
-type UpdateStatus = 'idle' | 'updating' | 'updated' | 'current' | 'error';
+type UpdateStatus = 'idle' | 'checking' | 'current' | 'available' | 'error';
+
+interface UpdateInfo {
+  message: string;
+  latestCommit?: string;
+  behind?: number;
+}
 
 export default function Header({
   activeAgents,
@@ -42,210 +47,259 @@ export default function Header({
   dashboardSubtitle = 'Mission Control',
   repoUrl,
   logoIcon = 'zap',
-  accentColor,
 }: HeaderProps) {
   const LogoIcon = LOGO_ICONS[logoIcon] || Zap;
   const [updateStatus, setUpdateStatus] = useState<UpdateStatus>('idle');
+  const [updateInfo, setUpdateInfo] = useState<UpdateInfo | null>(null);
+  const [bannerDismissed, setBannerDismissed] = useState(false);
 
-  const handleUpdate = useCallback(async () => {
-    if (updateStatus === 'updating') return;
-    setUpdateStatus('updating');
+  const checkForUpdates = useCallback(async () => {
+    if (updateStatus === 'checking') return;
+    setUpdateStatus('checking');
+    setBannerDismissed(false);
 
     try {
-      const headers: HeadersInit = { 'Content-Type': 'application/json' };
+      const headers: HeadersInit = {};
       const apiKey = process.env.NEXT_PUBLIC_OPENCLAW_API_KEY;
       if (apiKey) headers['Authorization'] = `Bearer ${apiKey}`;
 
-      const res = await fetch('/api/update', { method: 'POST', headers });
+      const res = await fetch('/api/update', { headers });
       const data = await res.json();
 
       if (data.status === 'current') {
         setUpdateStatus('current');
-        toast.info('Already up to date', { duration: 3000 });
-      } else if (data.status === 'updated') {
-        setUpdateStatus('updated');
-        toast.success('Update applied', {
-          description: 'Server restarting — page will reload shortly',
-          duration: 5000,
+        setUpdateInfo({ message: 'Up to date' });
+        setTimeout(() => setUpdateStatus('idle'), 3000);
+      } else if (data.status === 'update-available') {
+        setUpdateStatus('available');
+        setUpdateInfo({
+          message: data.message,
+          latestCommit: data.latestCommit,
+          behind: data.behind,
         });
-        // Reload page after server has time to restart
-        setTimeout(() => window.location.reload(), 4000);
       } else {
         setUpdateStatus('error');
-        toast.error('Update failed', {
-          description: data.message || 'Unknown error',
-          duration: 5000,
-        });
+        setTimeout(() => setUpdateStatus('idle'), 4000);
       }
     } catch {
       setUpdateStatus('error');
-      toast.error('Update failed', {
-        description: 'Could not reach the server',
-        duration: 5000,
-      });
+      setTimeout(() => setUpdateStatus('idle'), 4000);
     }
-
-    // Reset after 4s
-    setTimeout(() => setUpdateStatus('idle'), 4000);
   }, [updateStatus]);
+
+  // Check on mount (silent)
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      checkForUpdates();
+    }, 5000); // 5s after page load
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const updateIcon = {
     idle: <Download className="w-4 h-4" />,
-    updating: <Loader2 className="w-4 h-4 animate-spin" />,
-    updated: <Check className="w-4 h-4" />,
+    checking: <Loader2 className="w-4 h-4 animate-spin" />,
     current: <Check className="w-4 h-4" />,
-    error: <AlertCircle className="w-4 h-4" />,
+    available: <Download className="w-4 h-4" />,
+    error: <Download className="w-4 h-4" />,
   }[updateStatus];
 
-  const updateColors = {
+  const updateButtonStyle = {
     idle: 'bg-secondary/50 text-muted-foreground border-border hover:border-border/80 hover:text-foreground hover:bg-secondary',
-    updating: 'bg-blue-DEFAULT/10 text-blue-DEFAULT border-blue-DEFAULT/30',
-    updated: 'bg-green-DEFAULT/10 text-green-DEFAULT border-green-DEFAULT/30',
-    current: 'bg-green-DEFAULT/10 text-green-DEFAULT border-green-DEFAULT/30',
-    error: 'bg-red-DEFAULT/10 text-red-DEFAULT border-red-DEFAULT/30',
+    checking: 'bg-secondary/50 text-muted-foreground border-border cursor-wait',
+    current: 'text-foreground border',
+    available: 'text-foreground border animate-pulse-soft',
+    error: 'bg-secondary/50 text-muted-foreground border-border',
   }[updateStatus];
+
+  const showBanner = updateStatus === 'available' && updateInfo && !bannerDismissed;
 
   return (
-    <header className="flex items-center justify-between py-4 mb-2">
-      {/* Left: Logo & Title */}
-      <div className="flex items-center gap-4">
-        {/* Logo */}
-        <div className="relative">
-          <div className="absolute inset-0 blur-xl rounded-full" style={{ background: 'var(--accent-primary-light)' }} />
-          <div
-            className="relative w-10 h-10 rounded-xl flex items-center justify-center"
-            style={{
-              background: `linear-gradient(to bottom right, var(--accent-primary-light), transparent)`,
-              border: `1px solid color-mix(in srgb, var(--accent-primary) 30%, transparent)`,
-            }}
-          >
-            <LogoIcon className="w-5 h-5" style={{ color: 'var(--accent-primary)' }} />
+    <div>
+      <header className="flex items-center justify-between py-4 mb-2">
+        {/* Left: Logo & Title */}
+        <div className="flex items-center gap-4">
+          <div className="relative">
+            <div className="absolute inset-0 blur-xl rounded-full" style={{ background: 'var(--accent-primary-light)' }} />
+            <div
+              className="relative w-10 h-10 rounded-xl flex items-center justify-center"
+              style={{
+                background: `linear-gradient(to bottom right, var(--accent-primary-light), transparent)`,
+                border: `1px solid color-mix(in srgb, var(--accent-primary) 30%, transparent)`,
+              }}
+            >
+              <LogoIcon className="w-5 h-5" style={{ color: 'var(--accent-primary)' }} />
+            </div>
+          </div>
+          <div>
+            <h1 className="text-lg font-semibold tracking-tight text-foreground">
+              {dashboardName}
+            </h1>
+            <p className="text-xs text-muted-foreground">{dashboardSubtitle}</p>
           </div>
         </div>
 
-        {/* Title */}
-        <div>
-          <h1 className="text-lg font-semibold tracking-tight text-foreground">
-            {dashboardName}
-          </h1>
-          <p className="text-xs text-muted-foreground">{dashboardSubtitle}</p>
-        </div>
-      </div>
-
-      {/* Center: Stats */}
-      <div className="hidden md:flex items-center gap-6">
-        {/* Active Agents */}
-        <div className="flex items-center gap-2">
-          <div className="flex items-center gap-1.5">
-            <span className="status-dot working" />
-            <span className="text-sm text-muted-foreground">
-              <span className="font-semibold text-foreground font-tabular">{activeAgents}</span>
-              <span className="text-muted-foreground">/{totalAgents}</span>
+        {/* Center: Stats */}
+        <div className="hidden md:flex items-center gap-6">
+          <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5">
+              <span className="status-dot working" />
+              <span className="text-sm text-muted-foreground">
+                <span className="font-semibold text-foreground font-tabular">{activeAgents}</span>
+                <span className="text-muted-foreground">/{totalAgents}</span>
+              </span>
+            </div>
+            <span className="text-xs text-muted-foreground">agents</span>
+          </div>
+          <div className="w-px h-4 bg-border" />
+          <div className="flex items-center gap-2">
+            <span className="text-sm">
+              <span className="font-semibold text-foreground font-tabular">{inProgressTasks}</span>
+              <span className="text-muted-foreground"> active</span>
+            </span>
+            <span className="text-xs text-muted-foreground">
+              of {totalTasks} tasks
             </span>
           </div>
-          <span className="text-xs text-muted-foreground">agents</span>
         </div>
 
-        <div className="w-px h-4 bg-border" />
-
-        {/* Tasks */}
+        {/* Right: Actions */}
         <div className="flex items-center gap-2">
-          <span className="text-sm">
-            <span className="font-semibold text-foreground font-tabular">{inProgressTasks}</span>
-            <span className="text-muted-foreground"> active</span>
-          </span>
-          <span className="text-xs text-muted-foreground">
-            of {totalTasks} tasks
-          </span>
-        </div>
-      </div>
+          {onCommandPalette && (
+            <button
+              onClick={onCommandPalette}
+              className={cn(
+                "hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm",
+                "bg-secondary/50 text-muted-foreground",
+                "border border-border hover:border-border/80",
+                "hover:bg-secondary hover:text-foreground",
+                "transition-all duration-200"
+              )}
+            >
+              <Command className="w-3.5 h-3.5" />
+              <span className="text-xs">Search</span>
+              <kbd className="kbd ml-1">⌘K</kbd>
+            </button>
+          )}
 
-      {/* Right: Actions */}
-      <div className="flex items-center gap-2">
-        {/* Command Palette Button */}
-        {onCommandPalette && (
+          {repoUrl && (
+            <a
+              href={repoUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className={cn(
+                "w-10 h-10 rounded-xl flex items-center justify-center transition-all duration-200",
+                "bg-secondary/50 text-muted-foreground border border-border",
+                "hover:border-border/80 hover:text-foreground hover:bg-secondary"
+              )}
+              title="View repository"
+            >
+              <Github className="w-4 h-4" />
+            </a>
+          )}
+
+          {/* Check for Updates Button */}
           <button
-            onClick={onCommandPalette}
+            onClick={checkForUpdates}
+            disabled={updateStatus === 'checking'}
             className={cn(
-              "hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm",
-              "bg-secondary/50 text-muted-foreground",
-              "border border-border hover:border-border/80",
-              "hover:bg-secondary hover:text-foreground",
-              "transition-all duration-200"
+              "w-10 h-10 rounded-xl flex items-center justify-center transition-all duration-200 border",
+              updateButtonStyle,
             )}
+            style={updateStatus === 'current' ? {
+              background: 'var(--accent-primary-light)',
+              color: 'var(--accent-primary)',
+              borderColor: 'color-mix(in srgb, var(--accent-primary) 30%, transparent)',
+            } : updateStatus === 'available' ? {
+              background: 'var(--accent-primary-light)',
+              color: 'var(--accent-primary)',
+              borderColor: 'color-mix(in srgb, var(--accent-primary) 30%, transparent)',
+            } : undefined}
+            title={
+              updateStatus === 'idle' ? 'Check for updates' :
+              updateStatus === 'checking' ? 'Checking...' :
+              updateStatus === 'current' ? 'Up to date' :
+              updateStatus === 'available' ? 'Update available' :
+              'Check for updates'
+            }
           >
-            <Command className="w-3.5 h-3.5" />
-            <span className="text-xs">Search</span>
-            <kbd className="kbd ml-1">⌘K</kbd>
+            {updateIcon}
           </button>
-        )}
 
-        {/* Repo Link */}
-        {repoUrl && (
-          <a
-            href={repoUrl}
-            target="_blank"
-            rel="noopener noreferrer"
+          {/* Activity Feed Toggle */}
+          <button
+            onClick={onFeedToggle}
             className={cn(
-              "w-10 h-10 rounded-xl flex items-center justify-center transition-all duration-200",
-              "bg-secondary/50 text-muted-foreground border border-border",
-              "hover:border-border/80 hover:text-foreground hover:bg-secondary"
+              "relative w-10 h-10 rounded-xl flex items-center justify-center transition-all duration-200",
+              feedOpen
+                ? "border"
+                : "bg-secondary/50 text-muted-foreground border border-border hover:border-border/80 hover:text-foreground hover:bg-secondary"
             )}
-            title="View repository"
+            style={feedOpen ? {
+              background: 'var(--accent-primary-light)',
+              color: 'var(--accent-primary)',
+              borderColor: 'color-mix(in srgb, var(--accent-primary) 30%, transparent)',
+            } : undefined}
           >
-            <Github className="w-4 h-4" />
-          </a>
-        )}
+            <Activity className="w-4 h-4" />
+            {!feedOpen && (
+              <span
+                className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full animate-pulse-soft"
+                style={{
+                  background: 'var(--accent-primary)',
+                  boxShadow: `0 0 8px var(--accent-glow)`,
+                }}
+              />
+            )}
+          </button>
+        </div>
+      </header>
 
-        {/* Update Button */}
-        <button
-          onClick={handleUpdate}
-          disabled={updateStatus === 'updating'}
-          className={cn(
-            "w-10 h-10 rounded-xl flex items-center justify-center transition-all duration-200 border",
-            updateColors,
-            updateStatus === 'updating' && "cursor-wait"
-          )}
-          title={
-            updateStatus === 'idle' ? 'Check for updates' :
-            updateStatus === 'updating' ? 'Updating...' :
-            updateStatus === 'updated' ? 'Update complete' :
-            updateStatus === 'current' ? 'Up to date' :
-            'Update failed'
-          }
-        >
-          {updateIcon}
-        </button>
-
-        {/* Activity Feed Toggle */}
-        <button
-          onClick={onFeedToggle}
-          className={cn(
-            "relative w-10 h-10 rounded-xl flex items-center justify-center transition-all duration-200",
-            feedOpen
-              ? "border"
-              : "bg-secondary/50 text-muted-foreground border border-border hover:border-border/80 hover:text-foreground hover:bg-secondary"
-          )}
-          style={feedOpen ? {
+      {/* Update Available Banner */}
+      {showBanner && (
+        <div
+          className="mb-4 px-4 py-3 rounded-xl flex items-center justify-between gap-4 text-sm border"
+          style={{
             background: 'var(--accent-primary-light)',
-            color: 'var(--accent-primary)',
             borderColor: 'color-mix(in srgb, var(--accent-primary) 30%, transparent)',
-          } : undefined}
+          }}
         >
-          <Activity className="w-4 h-4" />
-
-          {/* Notification dot */}
-          {!feedOpen && (
-            <span
-              className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full animate-pulse-soft"
-              style={{
-                background: 'var(--accent-primary)',
-                boxShadow: `0 0 8px var(--accent-glow)`,
-              }}
-            />
-          )}
-        </button>
-      </div>
-    </header>
+          <div className="flex items-center gap-3 min-w-0">
+            <Download className="w-4 h-4 flex-shrink-0" style={{ color: 'var(--accent-primary)' }} />
+            <span className="text-foreground">
+              <strong>{updateInfo.message}</strong>
+              {updateInfo.latestCommit && (
+                <span className="text-muted-foreground ml-2 hidden sm:inline">
+                  — {updateInfo.latestCommit}
+                </span>
+              )}
+            </span>
+          </div>
+          <div className="flex items-center gap-2 flex-shrink-0">
+            {repoUrl && (
+              <a
+                href={repoUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="px-3 py-1.5 rounded-lg text-xs font-medium transition-colors"
+                style={{
+                  background: 'var(--accent-primary)',
+                  color: '#fff',
+                }}
+              >
+                View
+              </a>
+            )}
+            <button
+              onClick={() => setBannerDismissed(true)}
+              className="px-3 py-1.5 rounded-lg text-xs font-medium text-muted-foreground hover:text-foreground transition-colors"
+              style={{ background: 'var(--surface-subtle)' }}
+            >
+              Dismiss
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
   );
 }

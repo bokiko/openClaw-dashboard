@@ -165,7 +165,7 @@ export function TokenMetricsPanel({ tokenStats }: TokenMetricsPanelProps) {
                         exit={{ opacity: 0, x: 10 }}
                         className="h-[200px]"
                       >
-                        <ResponsiveContainer width="100%" height="100%">
+                        <ResponsiveContainer width="100%" height="100%" minWidth={1} minHeight={1}>
                           <AreaChart data={tokenStats.dailyTokens}>
                             <defs>
                               <linearGradient id="inputGradient" x1="0" y1="0" x2="0" y2="1">
@@ -245,7 +245,7 @@ export function TokenMetricsPanel({ tokenStats }: TokenMetricsPanelProps) {
                         exit={{ opacity: 0, x: 10 }}
                         className="h-[200px]"
                       >
-                        <ResponsiveContainer width="100%" height="100%">
+                        <ResponsiveContainer width="100%" height="100%" minWidth={1} minHeight={1}>
                           <BarChart data={tokenStats.tokensByModel} layout="vertical">
                             <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" horizontal={false} />
                             <XAxis

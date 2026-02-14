@@ -241,7 +241,7 @@ export function MetricsPanel({ tasks, agents }: MetricsPanelProps) {
                     exit={{ opacity: 0, x: 10 }}
                     className="h-[200px]"
                   >
-                    <ResponsiveContainer width="100%" height="100%">
+                    <ResponsiveContainer width="100%" height="100%" minWidth={1} minHeight={1}>
                       <AreaChart data={activityData}>
                         <defs>
                           <linearGradient id="taskGradient" x1="0" y1="0" x2="0" y2="1">
@@ -291,7 +291,7 @@ export function MetricsPanel({ tasks, agents }: MetricsPanelProps) {
                     className="h-[200px]"
                   >
                     {agentPerformance.length > 0 ? (
-                      <ResponsiveContainer width="100%" height="100%">
+                      <ResponsiveContainer width="100%" height="100%" minWidth={1} minHeight={1}>
                         <BarChart data={agentPerformance} layout="vertical">
                           <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" horizontal={false} />
                           <XAxis
@@ -343,7 +343,7 @@ export function MetricsPanel({ tasks, agents }: MetricsPanelProps) {
                     <div className="flex items-center h-full gap-6">
                       {/* Donut Chart */}
                       <div className="relative w-[180px] h-[180px] flex-shrink-0">
-                        <ResponsiveContainer width="100%" height="100%">
+                        <ResponsiveContainer width="100%" height="100%" minWidth={1} minHeight={1}>
                           <PieChart>
                             <Pie
                               data={statusDistribution}

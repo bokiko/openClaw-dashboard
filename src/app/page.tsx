@@ -170,6 +170,24 @@ export default function Home() {
           )}
         </div>
         
+        {/* Footer */}
+        <div className="mt-8 pb-6 flex items-center justify-center gap-2 text-xs text-muted-foreground/40">
+          <span>{config?.name || 'OpenClaw'} Dashboard{config?.version ? ` v${config.version}` : ''}</span>
+          {config?.repoUrl && (
+            <>
+              <span>·</span>
+              <a
+                href={config.repoUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="hover:text-muted-foreground transition-colors"
+              >
+                Star on GitHub
+              </a>
+            </>
+          )}
+        </div>
+
         {/* Last updated indicator */}
         {lastUpdated && (
           <div className="fixed bottom-4 right-4 text-xs text-muted-foreground/50">
