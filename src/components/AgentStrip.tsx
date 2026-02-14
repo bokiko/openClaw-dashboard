@@ -34,12 +34,12 @@ export default function AgentStrip({
         />
       )}
 
-      <div className="flex items-center justify-center gap-2 overflow-x-auto scrollbar-hide px-4">
+      <div className="flex flex-wrap items-center justify-center gap-1.5 sm:gap-2 px-2 sm:px-4">
         {/* All Button */}
         <button
           onClick={() => selectedAgentId && onAgentClick(selectedAgentId)}
           className={cn(
-            "flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all duration-200 shrink-0",
+            "flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-1.5 sm:py-2 rounded-xl text-sm font-medium transition-all duration-200",
             selectedAgentId === null
               ? "bg-secondary text-foreground border border-border/80 shadow-sm"
               : "text-muted-foreground hover:text-foreground hover:bg-secondary/50"
@@ -53,7 +53,7 @@ export default function AgentStrip({
         </button>
 
         {/* Separator */}
-        <div className="w-px h-6 bg-border/50 mx-1" />
+        <div className="w-px h-6 bg-border/50 mx-0.5 hidden sm:block" />
 
         {/* Working Agents */}
         {workingAgents.map(agent => (
@@ -69,7 +69,7 @@ export default function AgentStrip({
 
         {/* Idle separator */}
         {idleAgents.length > 0 && workingAgents.length > 0 && (
-          <div className="w-px h-6 bg-border/30 mx-1" />
+          <div className="w-px h-6 bg-border/30 mx-0.5 hidden sm:block" />
         )}
 
         {/* Idle Agents */}
@@ -110,7 +110,7 @@ function AgentButton({
       onClick={onClick}
       onDoubleClick={onDoubleClick}
       className={cn(
-        "flex items-center gap-2 px-3 py-1.5 rounded-xl text-sm transition-all duration-200 shrink-0",
+        "flex items-center gap-1.5 sm:gap-2 px-2 sm:px-3 py-1 sm:py-1.5 rounded-xl text-sm transition-all duration-200",
         isSelected
           ? "bg-secondary shadow-sm"
           : "hover:bg-secondary/30",
@@ -131,7 +131,7 @@ function AgentButton({
       />
 
       <span className={cn(
-        "hidden sm:block font-medium transition-colors",
+        "hidden sm:block font-medium transition-colors max-w-[8rem] truncate",
         isSelected ? "text-foreground" : "text-muted-foreground"
       )}>
         {agent.name}
@@ -145,7 +145,7 @@ function AgentButton({
 
       {agent.badge && (
         <span className={cn(
-          "text-[10px] px-1.5 py-0.5 rounded font-medium",
+          "text-[10px] px-1.5 py-0.5 rounded font-medium hidden sm:inline",
           agent.badge === 'lead'
             ? "text-green-DEFAULT bg-green-DEFAULT/10"
             : "text-blue-DEFAULT bg-blue-DEFAULT/10"

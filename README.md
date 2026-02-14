@@ -34,15 +34,17 @@ A real-time web dashboard that gives you eyes on your [OpenClaw](https://opencla
 
 | Feature | What it does |
 |---------|--------------|
-| **Agent Strip** | See every agent's status at a glance — who's working, who's idle |
+| **Agent Auto-Discovery** | Agents are detected from your task files automatically — no configuration needed |
+| **Agent Strip** | See every agent's status and completion stats at a glance — who's working, who's idle |
 | **Kanban Board** | Drag-and-drop tasks across lanes: In Progress, Review, Assigned, Waiting, Inbox, Done |
 | **Live Feed** | Real-time activity stream from task changes, auto-refreshes every 30s |
-| **Metrics Panel** | Charts and stats — task throughput, status distribution, completion rates |
+| **Metrics Panel** | Charts and stats — task throughput, status distribution, per-agent workload breakdown |
 | **Token Tracking** | Input/output token usage per task, model breakdown charts, daily trends |
 | **Personalization** | Custom name, theme (dark/light), 8 accent colors, logo icon — persists across updates |
-| **Self-Update** | One-click update button pulls latest code and auto-restarts the server |
+| **Welcome Screen** | Fresh installs get a guided onboarding with sample task format |
+| **Update Checker** | Header shows when a new version is available on GitHub |
 | **Command Palette** | `Cmd+K` to quickly filter agents, toggle feed, refresh data |
-| **Task & Agent Modals** | Click any task or agent for full detail views |
+| **Task & Agent Modals** | Click any task or agent for full detail views with activity timelines |
 
 ---
 
@@ -64,7 +66,7 @@ Tell your AI agent to clone the repo and read `AGENTS.md`. It handles installati
 See exactly how many tokens each task consumed. Per-model breakdowns. Daily trend charts. Input vs output splits. Know where your API budget is going before the invoice arrives.
 
 ### Self-updating
-One button in the header pulls the latest code from GitHub and auto-restarts the server. No SSH, no manual deploys. Your dashboard stays current without leaving the browser.
+The header shows when a new version is available on GitHub. Pull updates with a single `git pull` — your `settings.json` is gitignored, so your preferences are never overwritten.
 
 ### Production-ready security
 API key authentication. Rate limiting (60 req/min per IP). Path traversal protection. File size limits. Sanitized error messages. Published security audits in the repo — nothing hidden.
@@ -228,7 +230,7 @@ The dashboard is flexible with field names. Drop JSON files into your tasks dire
   "priority": "high",
   "claimed_by": "spark",
   "tags": ["backend", "security"],
-  "created_at": "2025-01-15T10:00:00Z"
+  "created_at": "2026-01-15T10:00:00Z"
 }
 ```
 
@@ -261,16 +263,26 @@ The dashboard checks these fields in order: `claimed_by` → `assignee` → firs
 
 ## Agent Roster
 
-The default agent roster matches the OpenClaw swarm squad. Customize via `settings.json` (set the `agents` array) or edit `src/lib/data.ts`:
+Agents are **auto-discovered** from your task files. Any unique `claimed_by`, `assignee`, or `deliverables[].assignee` value becomes an agent in the dashboard — no configuration required.
 
-| Agent | Role | Badge |
-|-------|------|-------|
-| Neo | Squad Lead | Lead |
-| Spark | Code & Writing | Specialist |
-| Pixel | Design & UI | Specialist |
-| Scout | Research | Specialist |
-| Critic | Review & QA | — |
-| Sentinel | Security | — |
+Auto-discovered agents get:
+- A capitalized name derived from their ID
+- A color from a 10-color palette
+- `working` status if they have an in-progress task, `idle` otherwise
+- Completion stats (`done/total`) shown on the agent strip
+
+To override with a custom roster, set the `agents` array in `settings.json`:
+
+```json
+{
+  "agents": [
+    { "id": "spark", "name": "Spark", "letter": "S", "color": "#ffb224", "role": "Code & Writing", "badge": "spc" },
+    { "id": "scout", "name": "Scout", "letter": "R", "color": "#3e63dd", "role": "Research" }
+  ]
+}
+```
+
+Settings agents take priority over auto-discovery when configured.
 
 ---
 
@@ -293,7 +305,7 @@ openClaw-dashboard/
 ├── src/
 │   ├── app/
 │   │   ├── api/data/route.ts      # API endpoint — reads task files from disk
-│   │   ├── api/update/route.ts    # Self-update endpoint (git pull + restart)
+│   │   ├── api/update/route.ts    # Update checker (git fetch + compare, read-only)
 │   │   ├── page.tsx                # Main dashboard page
 │   │   ├── layout.tsx              # Root layout, theme-aware
 │   │   └── globals.css             # Tailwind config, CSS variables (dark + light)
@@ -308,10 +320,11 @@ openClaw-dashboard/
 │   │   ├── TokenMetricsPanel.tsx   # Token usage charts and trends
 │   │   ├── MissionQueue.tsx        # Kanban board with drag-and-drop
 │   │   ├── TaskCard.tsx            # Individual task card (with token badge)
-│   │   └── TaskModal.tsx           # Task detail modal (with usage info)
+│   │   ├── TaskModal.tsx           # Task detail modal (with usage info)
+│   │   └── WelcomeScreen.tsx      # Onboarding guide for fresh installs
 │   ├── lib/
 │   │   ├── __tests__/              # Data layer tests (Vitest)
-│   │   ├── data.ts                 # Task loader, stats, token aggregation
+│   │   ├── data.ts                 # Task loader, agent discovery, stats, token aggregation
 │   │   ├── settings.ts             # Settings loader (reads settings.json)
 │   │   ├── useSwarmData.ts         # Client hook — fetches from API, auto-refreshes
 │   │   └── utils.ts                # Utility functions
