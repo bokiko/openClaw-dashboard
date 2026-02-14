@@ -41,9 +41,8 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-# generated task data (from sync-db bridge) — sample-*.json are tracked for out-of-box experience
-/tasks/*
-!/tasks/sample-*.json
+# generated task data (from sync-db bridge)
+/tasks/
 
 # nightly export bundles
 /exports

@@ -85,14 +85,14 @@ Next.js 16, React 19, Tailwind CSS. No heavy ORM, no background workers, no mess
 4. [Agent-Assisted Install](#recommended-agent-assisted-install)
 5. [Personalization](#personalization)
 6. [Configuration](#configuration)
-6. [Security](#security)
-7. [Task File Format](#task-file-format)
-8. [Agent Roster](#agent-roster)
-9. [Architecture](#architecture)
-10. [Tech Stack](#tech-stack)
-11. [Keyboard Shortcuts](#keyboard-shortcuts)
-12. [Audit Reports](#audit-reports)
-13. [Contributing](#contributing)
+7. [Security](#security)
+8. [Task File Format](#task-file-format)
+9. [Agent Roster](#agent-roster)
+10. [Architecture](#architecture)
+11. [Tech Stack](#tech-stack)
+12. [Keyboard Shortcuts](#keyboard-shortcuts)
+13. [Audit Reports](#audit-reports)
+14. [Contributing](#contributing)
 
 ---
 
@@ -280,6 +280,9 @@ The default agent roster matches the OpenClaw swarm squad. Customize via `settin
 openClaw-dashboard/
 ├── audits/                        # Security audit reports
 ├── scripts/
+│   ├── __tests__/                 # Script tests (Vitest)
+│   ├── export-bundle.ts           # Nightly snapshot export
+│   ├── executive-report.ts        # Weekly executive markdown report
 │   ├── sync-db.ts                 # PostgreSQL → task JSON bridge
 │   ├── log-usage.ts               # Token usage writer (DB + file)
 │   ├── dispatch-task.sh           # Agent wrapper with auto-capture
@@ -307,6 +310,7 @@ openClaw-dashboard/
 │   │   ├── TaskCard.tsx            # Individual task card (with token badge)
 │   │   └── TaskModal.tsx           # Task detail modal (with usage info)
 │   ├── lib/
+│   │   ├── __tests__/              # Data layer tests (Vitest)
 │   │   ├── data.ts                 # Task loader, stats, token aggregation
 │   │   ├── settings.ts             # Settings loader (reads settings.json)
 │   │   ├── useSwarmData.ts         # Client hook — fetches from API, auto-refreshes
@@ -315,6 +319,7 @@ openClaw-dashboard/
 │       └── index.ts                # TypeScript interfaces and config
 ├── AGENTS.md                       # AI agent setup guide (model-agnostic)
 ├── settings.example.json           # Settings schema reference
+├── vitest.config.ts                # Test runner configuration
 ├── .env.example                    # Environment variable reference
 ├── next.config.ts
 ├── package.json
