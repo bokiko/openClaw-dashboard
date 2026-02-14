@@ -32,13 +32,9 @@ export async function GET(request: Request) {
     const behindOutput = execSync('git rev-list --count HEAD..@{u}', { cwd }).toString().trim();
     const behind = parseInt(behindOutput, 10);
 
-    // Get the latest remote commit message for context
-    const latestMsg = execSync('git log @{u} -1 --format=%s', { cwd }).toString().trim();
-
     return NextResponse.json({
       status: 'update-available',
-      message: `${behind} new commit${behind === 1 ? '' : 's'} available`,
-      latestCommit: latestMsg,
+      message: `A new version is available`,
       behind,
     });
   } catch (error) {

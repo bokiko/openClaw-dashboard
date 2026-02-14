@@ -31,7 +31,6 @@ type UpdateStatus = 'idle' | 'checking' | 'current' | 'available' | 'error';
 
 interface UpdateInfo {
   message: string;
-  latestCommit?: string;
   behind?: number;
 }
 
@@ -74,7 +73,6 @@ export default function Header({
         setUpdateStatus('available');
         setUpdateInfo({
           message: data.message,
-          latestCommit: data.latestCommit,
           behind: data.behind,
         });
       } else {
@@ -268,11 +266,6 @@ export default function Header({
             <Download className="w-4 h-4 flex-shrink-0" style={{ color: 'var(--accent-primary)' }} />
             <span className="text-foreground">
               <strong>{updateInfo.message}</strong>
-              {updateInfo.latestCommit && (
-                <span className="text-muted-foreground ml-2 hidden sm:inline">
-                  — {updateInfo.latestCommit}
-                </span>
-              )}
             </span>
           </div>
           <div className="flex items-center gap-2 flex-shrink-0">
