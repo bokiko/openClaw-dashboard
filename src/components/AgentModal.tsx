@@ -1,10 +1,10 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { X, Briefcase, Activity, Clock } from 'lucide-react';
+import { X, Briefcase, Activity, Clock, ListChecks } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { timeAgo } from '@/lib/utils';
-import type { Agent, Task, FeedItem } from '@/types';
+import type { Agent, Task, FeedItem, TaskStatus } from '@/types';
 import { PRIORITY_CONFIG, STATUS_CONFIG } from '@/types';
 import AgentAvatar from './AgentAvatar';
 
@@ -104,6 +104,56 @@ export default function AgentModal({
           </span>
         </div>
 
+        {/* Task Timeline */}
+        {agentTasks.length > 0 && (
+          <div className="mb-6">
+            <div className="flex items-center gap-2 mb-3">
+              <ListChecks className="w-4 h-4 text-muted-foreground" />
+              <span className="text-sm font-medium text-foreground">
+                Task Timeline
+              </span>
+            </div>
+
+            <div className="space-y-3 max-h-[200px] overflow-y-auto scrollbar-thin">
+              {(['done', 'in-progress', 'review', 'assigned', 'waiting', 'inbox'] as TaskStatus[]).map(statusKey => {
+                const group = agentTasks.filter(t => t.status === statusKey);
+                if (group.length === 0) return null;
+                const statusInfo = STATUS_CONFIG[statusKey];
+                return (
+                  <div key={statusKey}>
+                    <p className="text-[10px] uppercase tracking-wider text-muted-foreground/60 mb-1.5 px-1">
+                      {statusInfo.label} ({group.length})
+                    </p>
+                    <div className="space-y-1">
+                      {group
+                        .sort((a, b) => (b.updatedAt || b.createdAt) - (a.updatedAt || a.createdAt))
+                        .slice(0, 10)
+                        .map(task => (
+                          <div
+                            key={task.id}
+                            onClick={() => onTaskClick(task.id)}
+                            className="flex items-center gap-2 px-2 py-1.5 rounded-lg cursor-pointer hover:bg-secondary/50 transition-colors"
+                          >
+                            <span
+                              className="w-2 h-2 rounded-full shrink-0"
+                              style={{ backgroundColor: statusInfo.color }}
+                            />
+                            <span className="text-sm text-foreground flex-1 truncate">
+                              {task.title}
+                            </span>
+                            <span className="text-[10px] text-muted-foreground/50 font-tabular shrink-0" suppressHydrationWarning>
+                              {timeAgo(task.updatedAt || task.createdAt)}
+                            </span>
+                          </div>
+                        ))}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
         {/* Assigned Tasks */}
         <div className="mb-6">
           <div className="flex items-center gap-2 mb-3">
@@ -120,7 +170,7 @@ export default function AgentModal({
             {agentTasks.map(task => {
               const priority = PRIORITY_CONFIG[task.priority];
               const status = STATUS_CONFIG[task.status];
-              
+
               return (
                 <div
                   key={task.id}

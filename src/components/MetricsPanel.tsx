@@ -90,19 +90,25 @@ export function MetricsPanel({ tasks, agents }: MetricsPanelProps) {
 
   const agentPerformance = useMemo(() => {
     const agentMap = new Map(agents.map(a => [a.id, a]))
-    const counts: Record<string, number> = {}
+    const counts: Record<string, { done: number; inProgress: number; other: number }> = {}
     for (const task of tasks) {
       if (task.assigneeId) {
-        counts[task.assigneeId] = (counts[task.assigneeId] || 0) + 1
+        if (!counts[task.assigneeId]) counts[task.assigneeId] = { done: 0, inProgress: 0, other: 0 }
+        if (task.status === 'done') counts[task.assigneeId].done++
+        else if (task.status === 'in-progress') counts[task.assigneeId].inProgress++
+        else counts[task.assigneeId].other++
       }
     }
     return Object.entries(counts)
-      .map(([id, completed]) => ({
+      .map(([id, c]) => ({
         name: agentMap.get(id)?.name || id.charAt(0).toUpperCase() + id.slice(1),
-        completed,
+        done: c.done,
+        inProgress: c.inProgress,
+        other: c.other,
+        total: c.done + c.inProgress + c.other,
         color: agentMap.get(id)?.color || '#697177',
       }))
-      .sort((a, b) => b.completed - a.completed)
+      .sort((a, b) => b.total - a.total)
       .slice(0, 8)
   }, [tasks, agents])
 
@@ -317,11 +323,9 @@ export function MetricsPanel({ tasks, agents }: MetricsPanelProps) {
                               color: 'hsl(var(--foreground))',
                             }}
                           />
-                          <Bar dataKey="completed" radius={[0, 4, 4, 0]}>
-                            {agentPerformance.map((entry, index) => (
-                              <Cell key={`cell-${index}`} fill={entry.color} />
-                            ))}
-                          </Bar>
+                          <Bar dataKey="done" stackId="tasks" fill="var(--green, #46a758)" radius={[0, 0, 0, 0]} name="Done" />
+                          <Bar dataKey="inProgress" stackId="tasks" fill="var(--blue, #3e63dd)" radius={[0, 0, 0, 0]} name="In Progress" />
+                          <Bar dataKey="other" stackId="tasks" fill="var(--muted-chart, #697177)" radius={[0, 4, 4, 0]} name="Other" />
                         </BarChart>
                       </ResponsiveContainer>
                     ) : (

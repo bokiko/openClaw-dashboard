@@ -41,8 +41,9 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-# generated task data (from sync-db bridge)
-/tasks/
+# generated task data (user task files)
+/tasks/*.json
+!/tasks/.gitkeep
 
 # nightly export bundles
 /exports

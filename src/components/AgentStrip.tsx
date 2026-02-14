@@ -1,11 +1,12 @@
 'use client';
 
 import { cn } from '@/lib/utils';
-import type { Agent } from '@/types';
+import type { Agent, Task } from '@/types';
 import AgentAvatar from './AgentAvatar';
 
 interface AgentStripProps {
   agents: Agent[];
+  tasks: Task[];
   selectedAgentId: string | null;
   onAgentClick: (id: string) => void;
   onAgentDetail: (id: string) => void;
@@ -13,6 +14,7 @@ interface AgentStripProps {
 
 export default function AgentStrip({
   agents,
+  tasks,
   selectedAgentId,
   onAgentClick,
   onAgentDetail,
@@ -58,6 +60,7 @@ export default function AgentStrip({
           <AgentButton
             key={agent.id}
             agent={agent}
+            tasks={tasks}
             isSelected={selectedAgentId === agent.id}
             onClick={() => onAgentClick(agent.id)}
             onDoubleClick={() => onAgentDetail(agent.id)}
@@ -74,6 +77,7 @@ export default function AgentStrip({
           <AgentButton
             key={agent.id}
             agent={agent}
+            tasks={tasks}
             isSelected={selectedAgentId === agent.id}
             onClick={() => onAgentClick(agent.id)}
             onDoubleClick={() => onAgentDetail(agent.id)}
@@ -84,17 +88,23 @@ export default function AgentStrip({
   );
 }
 
-function AgentButton({ 
-  agent, 
-  isSelected, 
-  onClick, 
-  onDoubleClick 
-}: { 
-  agent: Agent; 
-  isSelected: boolean; 
+function AgentButton({
+  agent,
+  tasks,
+  isSelected,
+  onClick,
+  onDoubleClick
+}: {
+  agent: Agent;
+  tasks: Task[];
+  isSelected: boolean;
   onClick: () => void;
   onDoubleClick: () => void;
 }) {
+  const agentTasks = tasks.filter(t => t.assigneeId === agent.id);
+  const doneCount = agentTasks.filter(t => t.status === 'done').length;
+  const totalCount = agentTasks.length;
+
   return (
     <button
       onClick={onClick}
@@ -107,31 +117,37 @@ function AgentButton({
         isSelected && "ring-1 ring-offset-1 ring-offset-background"
       )}
       style={{
-        ...(isSelected && { 
+        ...(isSelected && {
           '--tw-ring-color': `${agent.color}50`,
           '--tw-ring-offset-color': 'hsl(240 6% 6%)'
         } as React.CSSProperties)
       }}
     >
-      <AgentAvatar 
-        agent={agent} 
-        size="sm" 
+      <AgentAvatar
+        agent={agent}
+        size="sm"
         showStatus={true}
         selected={isSelected}
       />
-      
+
       <span className={cn(
         "hidden sm:block font-medium transition-colors",
         isSelected ? "text-foreground" : "text-muted-foreground"
       )}>
         {agent.name}
       </span>
-      
+
+      {totalCount > 0 && (
+        <span className="text-[10px] text-muted-foreground font-tabular">
+          {doneCount}/{totalCount}
+        </span>
+      )}
+
       {agent.badge && (
         <span className={cn(
           "text-[10px] px-1.5 py-0.5 rounded font-medium",
-          agent.badge === 'lead' 
-            ? "text-green-DEFAULT bg-green-DEFAULT/10" 
+          agent.badge === 'lead'
+            ? "text-green-DEFAULT bg-green-DEFAULT/10"
             : "text-blue-DEFAULT bg-blue-DEFAULT/10"
         )}>
           {agent.badge}

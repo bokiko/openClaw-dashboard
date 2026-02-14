@@ -21,7 +21,7 @@ export function getDashboardConfig(): DashboardConfig {
     name: settings.name,
     subtitle: settings.subtitle,
     repoUrl: settings.repoUrl,
-    version: '0.2.1',
+    version: '0.3.0',
   };
 }
 
@@ -67,29 +67,88 @@ function sanitizeColor(color: string): string {
   return /^#[0-9a-fA-F]{6}$/.test(color) ? color : '#697177';
 }
 
-// ── Default Agent Roster ─────────────────────────────────────────────
-export const AGENTS: Agent[] = [
-  { id: 'neo', name: 'Neo', letter: 'N', color: sanitizeColor('#46a758'), role: 'Squad Lead', status: 'idle', badge: 'lead' },
-  { id: 'spark', name: 'Spark', letter: 'S', color: sanitizeColor('#ffb224'), role: 'Code & Writing', status: 'idle', badge: 'spc' },
-  { id: 'pixel', name: 'Pixel', letter: 'P', color: sanitizeColor('#e879a4'), role: 'Design & UI', status: 'idle', badge: 'spc' },
-  { id: 'scout', name: 'Scout', letter: 'R', color: sanitizeColor('#3e63dd'), role: 'Research', status: 'idle', badge: 'spc' },
-  { id: 'critic', name: 'Critic', letter: 'C', color: sanitizeColor('#8e4ec6'), role: 'Review & QA', status: 'idle' },
-  { id: 'sentinel', name: 'Sentinel', letter: 'T', color: sanitizeColor('#00a2c7'), role: 'Security', status: 'idle' },
+// ── Agent Color Palette ──────────────────────────────────────────────
+const AGENT_PALETTE = [
+  '#46a758', '#3e63dd', '#8e4ec6', '#ffb224', '#e879a4',
+  '#00a2c7', '#e54d2e', '#f76b15', '#697177', '#30a46c',
 ];
 
-// ── Dynamic Agent Status ─────────────────────────────────────────────
-export function getAgents(): Agent[] {
+// ── Auto-Discover Agents ─────────────────────────────────────────────
+function discoverAgentsFromTasks(tasks: Task[]): Agent[] {
+  const ids = new Set<string>();
+  for (const task of tasks) {
+    if (task.assigneeId) ids.add(task.assigneeId);
+  }
+
+  const inProgressIds = new Set(
+    tasks.filter(t => t.status === 'in-progress').map(t => t.assigneeId).filter(Boolean)
+  );
+
+  let i = 0;
+  const agents: Agent[] = [];
+  for (const id of ids) {
+    agents.push({
+      id,
+      name: capitalize(id),
+      letter: id.charAt(0).toUpperCase(),
+      color: sanitizeColor(AGENT_PALETTE[i % AGENT_PALETTE.length]),
+      role: 'Agent',
+      status: inProgressIds.has(id) ? 'working' : 'idle',
+    });
+    i++;
+  }
+
+  return agents;
+}
+
+// ── Get Agents ───────────────────────────────────────────────────────
+export function getAgents(tasks?: Task[]): Agent[] {
+  // 1. Settings agents (user-configured roster)
+  const settings = loadSettings();
+  if (settings.agents && settings.agents.length > 0) {
+    const configuredAgents: Agent[] = settings.agents.map(a => ({
+      id: a.id,
+      name: a.name,
+      letter: a.letter,
+      color: sanitizeColor(a.color),
+      role: a.role,
+      status: 'idle' as const,
+      badge: a.badge,
+    }));
+
+    // Overlay status from tasks
+    if (tasks) {
+      const inProgressIds = new Set(
+        tasks.filter(t => t.status === 'in-progress').map(t => t.assigneeId).filter(Boolean)
+      );
+      for (const agent of configuredAgents) {
+        if (inProgressIds.has(agent.id)) agent.status = 'working';
+      }
+    }
+
+    // Overlay agents-status.json if it exists
+    return overlayAgentStatus(configuredAgents);
+  }
+
+  // 2. Auto-discover from tasks
+  const discovered = discoverAgentsFromTasks(tasks || []);
+
+  // 3. Overlay agents-status.json if it exists
+  return overlayAgentStatus(discovered);
+}
+
+function overlayAgentStatus(agents: Agent[]): Agent[] {
   const statusPath = join(getTasksDir(), 'agents-status.json');
-  if (!existsSync(statusPath)) return AGENTS;
+  if (!existsSync(statusPath)) return agents;
 
   try {
     const raw = JSON.parse(readFileSync(statusPath, 'utf-8')) as Record<string, string>;
-    return AGENTS.map(agent => ({
+    return agents.map(agent => ({
       ...agent,
-      status: (raw[agent.id] === 'working' ? 'working' : 'idle') as Agent['status'],
+      status: raw[agent.id] === 'working' ? 'working' as const : agent.status,
     }));
   } catch {
-    return AGENTS;
+    return agents;
   }
 }
 
@@ -291,7 +350,7 @@ export function generateFeed(tasks: Task[]): FeedItem[] {
   }
 
   // Add a status item
-  const agents = getAgents();
+  const agents = getAgents(tasks);
   const workingAgents = agents.filter(a => a.status === 'working').length;
   feed.unshift({
     id: 'status-now',

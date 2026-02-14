@@ -11,6 +11,7 @@ import AgentModal from '@/components/AgentModal';
 import { MetricsPanel } from '@/components/MetricsPanel';
 import { TokenMetricsPanel } from '@/components/TokenMetricsPanel';
 import { CommandPalette } from '@/components/CommandPalette';
+import WelcomeScreen from '@/components/WelcomeScreen';
 import { toast } from 'sonner';
 import { useSwarmData } from '@/lib/useSwarmData';
 import type { TaskStatus } from '@/types';
@@ -125,6 +126,30 @@ export default function Home() {
     );
   }
 
+  // Welcome screen for fresh installs
+  if (!loading && tasks.length === 0 && agents.length === 0) {
+    return (
+      <div className="min-h-screen">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+          <Header
+            activeAgents={0}
+            totalAgents={0}
+            totalTasks={0}
+            inProgressTasks={0}
+            feedOpen={false}
+            onFeedToggle={handleFeedToggle}
+            dashboardName={config?.name}
+            dashboardSubtitle={config?.subtitle}
+            repoUrl={config?.repoUrl}
+            logoIcon={settings?.logoIcon}
+            accentColor={settings?.accent?.primary}
+          />
+          <WelcomeScreen dashboardName={config?.name} />
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen">
       {/* Command Palette - Global */}
@@ -147,6 +172,7 @@ export default function Home() {
 
         <AgentStrip
           agents={agents}
+          tasks={tasks}
           selectedAgentId={selectedAgentId}
           onAgentClick={handleAgentClick}
           onAgentDetail={(id) => setAgentDetailId(id)}

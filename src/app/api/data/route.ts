@@ -42,7 +42,7 @@ export async function GET(request: Request) {
     const stats = getStats(tasks);
 
     return NextResponse.json({
-      agents: getAgents(),
+      agents: getAgents(tasks),
       tasks,
       feed,
       stats,
