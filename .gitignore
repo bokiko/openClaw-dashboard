@@ -56,3 +56,4 @@ settings.json
 .tldr/
 .tldrignore
 thoughts/
+logs/*.log
