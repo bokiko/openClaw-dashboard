@@ -83,6 +83,8 @@ DASHBOARD_SECRET=
 # GATEWAY_WS_URL=ws://127.0.0.1:18789
 # GATEWAY_TOKEN=your-gateway-token
 # GATEWAY_HEALTH_URL=http://127.0.0.1:18792
+# Dashboard origin sent as WS header (must match gateway's controlUi.allowedOrigins)
+# GATEWAY_ORIGIN=http://192.168.1.100:3000
 # Client ID for gateway handshake (default: openclaw-control-ui)
 # GATEWAY_CLIENT_ID=openclaw-control-ui
 # Scopes to request (default: operator.admin,operator.read,operator.write,operator.talk)
@@ -95,7 +97,11 @@ DASHBOARD_SECRET=
 
 **Important:** Only uncomment and fill in the sections the user needs. File-based mode requires zero configuration beyond `OPENCLAW_TASKS_DIR`.
 
-**Gateway note:** If using gateway mode, the OpenClaw gateway must also have the dashboard's origin in its `controlUi.allowedOrigins` config. Without this, the gateway strips RPC scopes after auth and all data calls fail with "missing scope: operator.read". Run `openclaw doctor --non-interactive` after updating the gateway config to apply the change.
+**Gateway note:** If using gateway mode, the OpenClaw gateway needs two config changes:
+1. Add the dashboard's origin (e.g. `http://192.168.x.x:3000`) to `controlUi.allowedOrigins`
+2. Set `controlUi.allowInsecureAuth: true` if the dashboard is on HTTP (local network without HTTPS)
+
+Without these, the gateway strips RPC scopes after auth and all data calls fail with "missing scope: operator.read". Run `openclaw doctor --non-interactive` after updating the gateway config to apply.
 
 ### Step 4: Create the tasks directory
 

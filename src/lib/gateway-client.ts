@@ -56,9 +56,9 @@ class GatewayClient {
 
   private doConnect(): Promise<void> {
     return new Promise((resolve, reject) => {
-      const ws = new WebSocket(GATEWAY_WS_URL);
+      const dashboardOrigin = process.env.GATEWAY_ORIGIN || `http://localhost:${process.env.PORT || 3000}`;
+      const ws = new WebSocket(GATEWAY_WS_URL, { headers: { Origin: dashboardOrigin } });
       let settled = false;
-      let challengeNonce: string | null = null;
 
       const timeout = setTimeout(() => {
         if (!settled) {
@@ -82,10 +82,8 @@ class GatewayClient {
           return;
         }
 
-        // Handle challenge event
+        // Handle challenge event — respond with connect request (no nonce needed for token auth)
         if ('event' in msg && msg.event === 'connect.challenge') {
-          challengeNonce = (msg.payload as { nonce: string })?.nonce;
-          // Send connect request
           const connectId = randomUUID();
           ws.send(JSON.stringify({
             type: 'req',
@@ -103,7 +101,6 @@ class GatewayClient {
               auth: { token: GATEWAY_TOKEN },
               role: process.env.GATEWAY_ROLE || 'operator',
               scopes: (process.env.GATEWAY_SCOPES || 'operator.admin,operator.read,operator.write,operator.talk').split(','),
-              ...(challengeNonce ? { nonce: challengeNonce } : {}),
             },
           }));
           return;
