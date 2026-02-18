@@ -11,7 +11,7 @@ import TaskEditModal from '@/components/TaskEditModal';
 import TaskCreateModal from '@/components/TaskCreateModal';
 import AgentModal from '@/components/AgentModal';
 import { MetricsPanel } from '@/components/MetricsPanel';
-import { RoutineManager } from '@/components/RoutineManager';
+import RoutineManager from '@/components/RoutineManager';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { CommandPalette } from '@/components/CommandPalette';
 import WelcomeScreen from '@/components/WelcomeScreen';
@@ -220,12 +220,17 @@ function DashboardContent() {
           />
         </ErrorBoundary>
 
-        {/* Routines */}
-        <div className="mt-8">
-          <ErrorBoundary>
-            <RoutineManager />
-          </ErrorBoundary>
-        </div>
+        {/* Routines (inline, not a modal) */}
+        {routinesOpen && (
+          <div className="mt-8">
+            <ErrorBoundary>
+              <RoutineManager
+                agents={agents}
+                onClose={() => setRoutinesOpen(false)}
+              />
+            </ErrorBoundary>
+          </div>
+        )}
 
         {/* Metrics Panel */}
         <div className="mt-8 mb-8">
@@ -264,30 +269,40 @@ function DashboardContent() {
         {notificationsOpen && (
           <NotificationPanel
             notifications={notifications}
-            onMarkRead={markNotificationRead}
-            onDelete={deleteNotification}
-            onClearAll={clearAllNotifications}
             onClose={() => setNotificationsOpen(false)}
+            onMarkRead={(id: number) => markNotificationRead(String(id))}
+            onMarkAllRead={clearAllNotifications}
           />
         )}
       </AnimatePresence>
 
       {/* Task Create Modal */}
-      <TaskCreateModal
-        open={createTaskOpen}
-        onOpenChange={setCreateTaskOpen}
-        agents={agents}
-      />
+      <AnimatePresence>
+        {createTaskOpen && (
+          <TaskCreateModal
+            agents={agents}
+            onClose={() => setCreateTaskOpen(false)}
+            onCreated={() => {
+              setCreateTaskOpen(false);
+              toast.success('Task created');
+            }}
+          />
+        )}
+      </AnimatePresence>
 
       {/* Task Edit Modal */}
-      {taskDetail && (
-        <TaskEditModal
-          task={taskDetail}
-          agents={agents}
-          open={!!taskDetailId}
-          onOpenChange={(open) => { if (!open) setTaskDetailId(null); }}
-        />
-      )}
+      <AnimatePresence>
+        {taskDetailId && (
+          <TaskEditModal
+            taskId={taskDetailId}
+            agents={agents}
+            onClose={() => setTaskDetailId(null)}
+            onUpdated={() => {
+              toast.success('Task updated');
+            }}
+          />
+        )}
+      </AnimatePresence>
 
       {/* Agent Detail Modal */}
       <AnimatePresence>
@@ -297,8 +312,7 @@ function DashboardContent() {
             tasks={tasks}
             feedItems={feed}
             onClose={() => setAgentDetailId(null)}
-            onTaskClick={(id) => { setAgentDetailId(null); setTaskDetailId(id); }}
-            onOpenChat={(id) => { setAgentDetailId(null); setChatAgentId(id); }}
+            onTaskClick={(id: string) => { setAgentDetailId(null); setTaskDetailId(id); }}
           />
         )}
       </AnimatePresence>

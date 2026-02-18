@@ -28,42 +28,51 @@
 
 ## What Is This?
 
-A real-time web dashboard for the [OpenClaw](https://openclaw.io) agent gateway. It connects to the gateway's WebSocket RPC protocol on the server side, translates responses into a rich UI, and gives you full operational visibility over your agents, sessions, cron jobs, and chat.
+A real-time web dashboard for the [OpenClaw](https://openclaw.io) agent swarm. It connects to the OpenClaw gateway via WebSocket RPC on the server side and provides full operational visibility — agents, tasks, routines, chat, and notifications.
+
+v2.0.0 adds a full platform layer: PostgreSQL persistence, JWT auth, browser WebSocket for real-time updates, rich task management, and a DB-backed notification system. The gateway adapter layer remains for live cluster integration.
 
 | Feature | What it does |
 |---------|--------------|
 | **Live Agent Strip** | See every agent's status at a glance — who's working, who's idle, model info |
-| **Session Kanban** | Active sessions displayed as task cards across status lanes (In Progress, Review, Assigned, Inbox) |
-| **Routine Manager** | Create, edit, enable/disable, and trigger cron jobs directly from the UI |
-| **Agent Chat** | Send messages to any agent through the gateway — responses rendered with code block highlighting |
-| **Activity Feed** | Cron run history as a live activity stream with severity indicators |
-| **Metrics Panel** | Charts and stats — session throughput, status distribution, per-agent workload |
-| **Notifications** | Notification panel with read/dismiss/clear actions |
-| **Command Palette** | `Cmd+K` to quickly filter agents, toggle feed, create tasks |
-| **Auth & Sessions** | Cookie-based operator login with HMAC-signed sessions |
-| **Mobile Responsive** | Full mobile support — wrapping layouts, touch-friendly sizing |
+| **Task Kanban** | Drag-and-drop task board across status lanes with create, edit, checklists, and comments |
+| **Routine Manager** | Create, edit, enable/disable, and trigger scheduled routines from the UI |
+| **Agent Chat** | Send messages to any agent — responses rendered with code block highlighting |
+| **Activity Feed** | Live activity stream with severity indicators |
+| **Metrics Panel** | Charts and stats — task throughput, status distribution, per-agent workload |
+| **Notifications** | Real-time notification panel with read/dismiss actions and severity badges |
+| **Command Palette** | `Cmd+K` to quickly filter agents, toggle feed, create tasks, open routines |
+| **Auth & Sessions** | JWT-based operator login with rate limiting and optional DB session tracking |
+| **DB Persistence** | PostgreSQL backend for tasks, agents, notifications, chat, and routines |
+| **WebSocket Updates** | Real-time browser push for task changes, feed events, and notifications |
+| **Skeleton Loading** | Smooth loading states with skeleton UI for agent strip, task cards, and metrics |
+| **Mobile Responsive** | Full mobile support — bottom-sheet modals, wrapping layouts, touch-friendly sizing |
 
 ---
 
 ## Architecture
 
-The dashboard sits between the operator's browser and the OpenClaw gateway:
+The dashboard supports two data paths:
 
 ```
-Browser (React)
-  │
-  │ HTTP fetch (polling)
-  ▼
-Next.js API Routes (/api/gateway/*)
-  │
-  │ WebSocket RPC (custom protocol)
-  ▼
-OpenClaw Gateway (ws://127.0.0.1:18789)
+Browser (React)                    Browser (React)
+  │                                  │
+  │ HTTP polling                     │ HTTP + WebSocket
+  ▼                                  ▼
+Gateway API Routes               v2.0 API Routes
+(/api/gateway/*)                 (/api/tasks, /api/notifications, etc.)
+  │                                  │
+  │ WebSocket RPC                    │ SQL queries
+  ▼                                  ▼
+OpenClaw Gateway                 PostgreSQL
+(ws://127.0.0.1:18789)          (dashboard DB)
 ```
 
-**Server-side gateway client** — A singleton WebSocket client (`gateway-client.ts`) connects to the gateway, handles the challenge/auth handshake, and exposes a typed `call<T>(method, params)` RPC interface. API routes call gateway methods in parallel and map responses through type-safe mappers.
+**Gateway mode** — Server-side WebSocket client connects to the OpenClaw gateway, handles challenge/auth, and exposes typed RPC calls. Sessions and cron jobs are mapped to the dashboard's component interfaces.
 
-**No direct browser-to-gateway WebSocket** — The browser uses HTTP polling against Next.js API routes. The WebSocket complexity is contained server-side.
+**DB mode** — Full CRUD via PostgreSQL with real-time browser push over WebSocket. Tasks, agents, notifications, chat messages, and routines are stored in the database.
+
+**Dual data source** — `data-source.ts` automatically selects DB or file-based storage depending on whether a database is configured.
 
 ---
 
@@ -72,7 +81,8 @@ OpenClaw Gateway (ws://127.0.0.1:18789)
 ### Prerequisites
 
 - Node.js 18+
-- A running OpenClaw gateway (default: `ws://127.0.0.1:18789`)
+- PostgreSQL (optional — falls back to file-based tasks without it)
+- A running OpenClaw gateway (optional — for live cluster integration)
 
 ### Setup
 
@@ -84,19 +94,42 @@ npm install
 
 ### Configure
 
-Create `.env.local` with your gateway connection details:
+Create `.env.local`:
 
 ```bash
-# Gateway connection (OpenClaw gateway WS RPC)
+# Auth: JWT signing secret (required for auth)
+DASHBOARD_SECRET=$(openssl rand -hex 32)
+
+# Database (optional — enables full v2.0 features)
+DATABASE_URL=postgresql://user:pass@localhost:5432/openclaw_dashboard
+
+# Gateway connection (optional — for live cluster integration)
 GATEWAY_WS_URL=ws://127.0.0.1:18789
 GATEWAY_TOKEN=your-gateway-token
 GATEWAY_HEALTH_URL=http://127.0.0.1:18792
 
-# Auth: Dashboard cookie signing secret (server-only)
-DASHBOARD_SECRET=$(openssl rand -hex 32)
+# Task directory (file-based fallback when no DB)
+OPENCLAW_TASKS_DIR=./tasks
+```
 
-# Auth: Operator login password
-OPERATOR_PASSWORD=your-strong-password
+### Database Setup (optional)
+
+Run the migration scripts in order:
+
+```bash
+psql $DATABASE_URL -f scripts/migrations/002_dashboard_tasks.sql
+psql $DATABASE_URL -f scripts/migrations/003_agents.sql
+psql $DATABASE_URL -f scripts/migrations/004_activity_log.sql
+psql $DATABASE_URL -f scripts/migrations/005_notifications.sql
+psql $DATABASE_URL -f scripts/migrations/006_chat_messages.sql
+psql $DATABASE_URL -f scripts/migrations/007_routines.sql
+psql $DATABASE_URL -f scripts/migrations/008_task_extras.sql
+```
+
+To migrate existing file-based tasks into the database:
+
+```bash
+npx tsx scripts/migrate-files-to-db.ts
 ```
 
 ### Run
@@ -105,52 +138,41 @@ OPERATOR_PASSWORD=your-strong-password
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) and log in with your operator password.
-
----
-
-## Gateway Protocol
-
-The dashboard speaks the gateway's custom WebSocket RPC protocol:
-
-1. Connect to `ws://host:18789`
-2. Handle `connect.challenge` event (nonce)
-3. Send `connect` request with auth token and operator role
-4. Issue RPC calls: `sessions.list`, `cron.list`, `cron.runs`, `chat.send`, etc.
-5. Responses are `{ ok, id, payload }` or `{ ok: false, id, error }`
-
-The gateway client handles all of this internally — API routes just call `gw.call('method', params)`.
+Open [http://localhost:3000](http://localhost:3000). If `DASHBOARD_SECRET` is set, log in with it as the password.
 
 ---
 
 ## API Routes
 
+### Gateway Routes (cluster integration)
+
 | Route | Method | Description |
 |-------|--------|-------------|
-| `/api/gateway/dashboard` | GET | Aggregated dashboard data (sessions, agents, cron runs, stats). 5s cache. |
-| `/api/gateway/routines` | GET | List all cron jobs as routines |
-| `/api/gateway/routines` | POST | Create a new cron job |
-| `/api/gateway/routines/[id]` | PATCH | Update or toggle a cron job |
-| `/api/gateway/routines/[id]` | DELETE | Remove a cron job |
+| `/api/gateway/dashboard` | GET | Aggregated dashboard data (sessions, agents, cron runs, stats) |
+| `/api/gateway/routines` | GET/POST | List or create cron jobs |
+| `/api/gateway/routines/[id]` | PATCH/DELETE | Update or remove a cron job |
 | `/api/gateway/routines/[id]/trigger` | POST | Trigger a cron job immediately |
 | `/api/gateway/chat` | POST | Send a message to an agent |
 | `/api/gateway/health` | GET | Health check (HTTP + RPC) |
-| `/api/auth/login` | POST | Operator login |
+
+### v2.0 Routes (DB-backed CRUD)
+
+| Route | Method | Description |
+|-------|--------|-------------|
+| `/api/tasks` | GET/POST | List or create tasks |
+| `/api/tasks/[id]` | GET/PATCH/DELETE | Read, update, or delete a task |
+| `/api/tasks/[id]/checklist` | POST/PATCH/DELETE | Manage task checklists |
+| `/api/tasks/[id]/comments` | GET/POST | Task comments |
+| `/api/feed` | GET | Activity feed |
+| `/api/notifications` | GET/POST | List or create notifications |
+| `/api/notifications/[id]` | PATCH/DELETE | Mark read or delete |
+| `/api/routines` | GET/POST | List or create routines |
+| `/api/routines/[id]` | PATCH/DELETE | Update or delete a routine |
+| `/api/chat` | POST | Send chat message |
+| `/api/chat/[agentId]/history` | GET | Chat history for an agent |
+| `/api/ws-token` | GET | Short-lived WebSocket auth token |
+| `/api/auth/login` | POST | Operator login (rate limited) |
 | `/api/auth/logout` | POST | Logout |
-
----
-
-## Data Mapping
-
-Gateway responses are mapped to the dashboard's existing component interfaces:
-
-| Gateway Source | Dashboard Target | Mapping Logic |
-|---|---|---|
-| `sessions.list` | Tasks / Kanban cards | Session key as title, model as priority (opus=urgent, sonnet=high), recency as status |
-| Agent IDs from sessions | Agent avatars | Derived from session data, model determines provider color |
-| `cron.list` | Routine cards | Cron expression parsed to day/time schedule |
-| `cron.runs` | Activity feed | Run status mapped to severity (failed=error, completed=success) |
-| Derived counts | Stats panel | Sessions by lane, agents by activity |
 
 ---
 
@@ -161,37 +183,57 @@ src/
 ├── app/
 │   ├── api/
 │   │   ├── auth/                    # Login/logout routes
-│   │   ├── cluster/                 # Legacy cluster proxy + ws-token
-│   │   └── gateway/                 # Gateway adapter routes
-│   │       ├── dashboard/route.ts   # Aggregation endpoint
-│   │       ├── routines/route.ts    # CRUD for cron jobs
-│   │       ├── chat/route.ts        # Agent chat
-│   │       └── health/route.ts      # Health check
+│   │   ├── cluster/                 # Legacy cluster proxy
+│   │   ├── gateway/                 # Gateway adapter routes
+│   │   ├── tasks/                   # Task CRUD + checklist/comments
+│   │   ├── notifications/           # Notification endpoints
+│   │   ├── routines/                # Routine scheduling endpoints
+│   │   ├── chat/                    # Agent chat endpoints
+│   │   ├── feed/                    # Activity feed
+│   │   └── ws-token/                # WebSocket auth token
 │   ├── login/page.tsx               # Login page
 │   └── page.tsx                     # Main dashboard
 ├── components/
-│   ├── AgentChatPanel.tsx           # Sliding chat panel
 │   ├── AgentStrip.tsx               # Agent status bar
+│   ├── AgentModal.tsx               # Agent detail + chat
+│   ├── ChatPanel.tsx                # Agent chat panel
 │   ├── Header.tsx                   # Top bar with stats
 │   ├── MissionQueue.tsx             # Kanban board
-│   ├── RoutineManager.tsx           # Cron job management
-│   ├── RoutineCard.tsx / Form.tsx   # Routine UI
+│   ├── TaskCard.tsx                 # Kanban task card
+│   ├── TaskCreateModal.tsx          # Task creation modal
+│   ├── TaskEditModal.tsx            # Task detail/edit modal
+│   ├── RoutineManager.tsx           # Routine scheduling UI
+│   ├── RoutineForm.tsx              # Routine create/edit form
 │   ├── MetricsPanel.tsx             # Charts and statistics
 │   ├── LiveFeed.tsx                 # Activity feed drawer
-│   ├── NotificationPanel.tsx        # Notification drawer
-│   ├── TaskCard.tsx                 # Kanban task card
-│   ├── TaskEditModal.tsx            # Task detail modal
+│   ├── NotificationBell.tsx         # Notification badge button
+│   ├── NotificationPanel.tsx        # Notification panel
 │   ├── CommandPalette.tsx           # Cmd+K palette
-│   └── ErrorBoundary.tsx            # Error boundary wrapper
+│   ├── ErrorBoundary.tsx            # Error boundary wrapper
+│   ├── WelcomeScreen.tsx            # Empty state onboarding
+│   ├── providers/                   # Client providers (WS, etc.)
+│   └── skeletons/                   # Loading skeleton components
 ├── lib/
-│   ├── gateway-client.ts            # WS RPC client (server-side singleton)
-│   ├── gateway-mappers.ts           # Gateway → dashboard type mappers
-│   ├── useClusterState.ts           # Primary data hook (HTTP + reducer)
-│   ├── WebSocketProvider.tsx         # Browser WS context (polling mode)
-│   ├── auth.ts                      # Cookie session management
-│   └── utils.ts                     # Utility functions
-└── types/
-    └── index.ts                     # All TypeScript interfaces
+│   ├── gateway-client.ts            # WS RPC client (server-side)
+│   ├── gateway-mappers.ts           # Gateway → dashboard mappers
+│   ├── useClusterState.ts           # Gateway data hook
+│   ├── WebSocketProvider.tsx         # Browser WS context
+│   ├── data.ts                      # File-based task loader
+│   ├── data-source.ts               # Dual data source selector
+│   ├── db.ts                        # PostgreSQL connection pool
+│   ├── db-data.ts                   # DB-backed data operations
+│   ├── auth.ts                      # JWT session management
+│   ├── ws-server.ts                 # Server-side WebSocket hub
+│   ├── ws-client.ts                 # Browser WebSocket client
+│   ├── notification-bus.ts          # Notification event bus
+│   ├── activity-logger.ts           # Activity log writer
+│   ├── routine-scheduler.ts         # Routine scheduling engine
+│   └── api-client.ts                # Typed API client
+├── types/
+│   └── index.ts                     # All TypeScript interfaces
+└── scripts/
+    ├── migrations/                  # SQL migration files
+    └── migrate-files-to-db.ts       # File → DB migration tool
 ```
 
 ---
@@ -202,6 +244,8 @@ src/
 |-------|-----------|
 | Framework | Next.js 16 (App Router) |
 | UI | React 19, Tailwind CSS 3.4 |
+| Database | PostgreSQL (optional) |
+| Auth | JWT via jose |
 | Gateway Client | ws (Node.js WebSocket) |
 | Animations | Framer Motion |
 | Charts | Recharts |
@@ -210,6 +254,7 @@ src/
 | Primitives | Radix UI (Dialog, Tooltip, Dropdown) |
 | Notifications | Sonner |
 | Icons | Lucide React |
+| Testing | Vitest |
 
 ---
 
@@ -226,11 +271,13 @@ src/
 
 ## Security
 
-- **Cookie-based auth** — HMAC-signed session cookies with configurable secret
+- **JWT auth** — Session tokens signed with HS256, 24h expiry, httpOnly cookies
+- **Rate limiting** — Login endpoint limited to 5 attempts per 15 minutes per IP
 - **Middleware protection** — All routes except `/login` and `/api/auth` require valid session
 - **Server-side gateway access** — Gateway token never exposed to the browser
-- **Path traversal protection** — API proxy validates path segments
-- **No direct browser WS** — Gateway protocol is server-contained
+- **Path traversal protection** — File-based task loader validates paths with `resolve()` + `startsWith()`
+- **DB session tracking** — Optional server-side session storage for audit/revocation
+- **Open access mode** — No `DASHBOARD_SECRET` = no auth required (v1 compatibility)
 
 ---
 

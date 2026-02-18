@@ -234,7 +234,6 @@ export default function Header({
           {/* Notification Bell */}
           <NotificationBell
             unreadCount={unreadNotifications}
-            isOpen={notificationsOpen}
             onClick={onNotificationsToggle}
           />
 

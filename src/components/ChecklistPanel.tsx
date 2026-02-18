@@ -83,7 +83,7 @@ export default function ChecklistPanel({ taskId, items, onToggle, onAdd }: Check
                   ? "text-muted-foreground/50 line-through"
                   : "text-foreground"
               )}>
-                {item.text}
+                {item.label}
               </span>
             </motion.button>
           ))}

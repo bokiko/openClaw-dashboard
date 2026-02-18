@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback, useReducer } from 'react';
 import { useWebSocket } from './useWebSocket';
 import type { Agent, Task, FeedItem, DashboardData, ClusterTask, ClusterWorker } from '@/types';
 import { clusterTaskToTask, clusterWorkerToAgent, activityToFeedItem } from '@/types';
-import type { Notification } from '@/components/NotificationPanel';
+import type { Notification } from '@/types';
 
 interface ClusterState {
   tasks: ClusterTask[];
@@ -91,14 +91,14 @@ function clusterReducer(state: ClusterState, action: ClusterAction): ClusterStat
       return {
         ...state,
         notifications: state.notifications.map(n =>
-          n.id === action.id ? { ...n, read: true } : n
+          String(n.id) === action.id ? { ...n, read: true } : n
         ),
       };
 
     case 'DELETE_NOTIFICATION':
       return {
         ...state,
-        notifications: state.notifications.filter(n => n.id !== action.id),
+        notifications: state.notifications.filter(n => String(n.id) !== action.id),
       };
 
     case 'CLEAR_NOTIFICATIONS':

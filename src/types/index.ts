@@ -41,9 +41,9 @@ export interface Task {
   updatedAt?: number;
   // Token tracking (from remote)
   usage?: TokenUsage[];
-  // Rich task fields (from cluster)
-  checklist?: ChecklistItem[];
-  comments?: Comment[];
+  // Rich task fields (from cluster or DB)
+  checklist?: (ChecklistItem | ClusterChecklistItem)[];
+  comments?: (Comment | TaskComment)[];
   deliverables?: Deliverable[];
   assignees?: string[];
   labels?: string[];
@@ -98,7 +98,7 @@ export interface ClusterTask {
   lane: string;
   assignees: string[];
   labels: string[];
-  checklist: ChecklistItem[];
+  checklist: ClusterChecklistItem[];
   comments: Comment[];
   deliverables: Deliverable[];
 }
@@ -132,7 +132,7 @@ export interface Activity {
   createdAt: string;
 }
 
-export interface ChecklistItem {
+export interface ClusterChecklistItem {
   text: string;
   checked: boolean;
 }
@@ -270,8 +270,8 @@ export function clusterTaskToTask(ct: ClusterTask, workers: ClusterWorker[]): Ta
     tags: ct.labels || [],
     createdAt: new Date(ct.createdAt).getTime(),
     updatedAt: ct.completedAt ? new Date(ct.completedAt).getTime() : undefined,
-    checklist: ct.checklist,
-    comments: ct.comments,
+    checklist: ct.checklist as (ChecklistItem | ClusterChecklistItem)[],
+    comments: ct.comments as (Comment | TaskComment)[],
     deliverables: ct.deliverables,
     assignees: ct.assignees,
     labels: ct.labels,
@@ -324,7 +324,7 @@ export function activityToFeedItem(a: Activity): FeedItem {
 
 // ── V2 Types (DB-backed task detail, notifications, chat, routines) ──
 
-export interface V2ChecklistItem {
+export interface ChecklistItem {
   id: number;
   taskId: string;
   label: string;
@@ -348,7 +348,7 @@ export interface TaskDeliverable {
   type: string;
 }
 
-export interface TaskDetail extends Task {
+export interface TaskDetail extends Omit<Task, 'checklist' | 'comments' | 'deliverables'> {
   parentId?: string;
   sortOrder: number;
   deletedAt?: number;
