@@ -50,6 +50,24 @@ v2.0.0 adds a full platform layer: PostgreSQL persistence, JWT auth, browser Web
 
 ---
 
+## Agent-Powered Setup (Recommended)
+
+The fastest way to get the dashboard running is to let an AI agent do it for you. The [`AGENTS.md`](AGENTS.md) file is a universal setup guide written specifically for AI assistants — it works with **Claude, GPT, Gemini, Kimi, Copilot**, or any other AI coding tool.
+
+**How to use it:**
+
+1. Open your AI assistant (Claude Code, ChatGPT, Cursor, etc.)
+2. Paste the contents of [`AGENTS.md`](AGENTS.md) into the conversation
+3. Say: *"Set up this dashboard for me"*
+
+The agent will clone the repo, configure environment variables, run migrations if needed, and start the dev server — all tailored to your system.
+
+> **Why AGENTS.md?** It covers three deployment modes (file-based, DB-backed, gateway), the personalization wizard, environment configuration, and verification steps. It's the same guide a human would follow, but structured so an AI can execute it reliably.
+
+If you prefer to set things up manually, see [Quick Start](#quick-start) below.
+
+---
+
 ## Architecture
 
 The dashboard supports two data paths:
@@ -196,7 +214,10 @@ src/
 ├── components/
 │   ├── AgentStrip.tsx               # Agent status bar
 │   ├── AgentModal.tsx               # Agent detail + chat
-│   ├── ChatPanel.tsx                # Agent chat panel
+│   ├── AgentChatPanel.tsx           # Full-screen agent chat
+│   ├── AgentAvatar.tsx              # Agent avatar component
+│   ├── ChatPanel.tsx                # Floating chat panel
+│   ├── ChecklistPanel.tsx           # Task checklist UI
 │   ├── Header.tsx                   # Top bar with stats
 │   ├── MissionQueue.tsx             # Kanban board
 │   ├── TaskCard.tsx                 # Kanban task card
@@ -217,7 +238,6 @@ src/
 │   ├── gateway-client.ts            # WS RPC client (server-side)
 │   ├── gateway-mappers.ts           # Gateway → dashboard mappers
 │   ├── useClusterState.ts           # Gateway data hook
-│   ├── WebSocketProvider.tsx         # Browser WS context
 │   ├── data.ts                      # File-based task loader
 │   ├── data-source.ts               # Dual data source selector
 │   ├── db.ts                        # PostgreSQL connection pool
