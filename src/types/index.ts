@@ -301,12 +301,13 @@ export function clusterTaskToTask(ct: ClusterTask, workers: ClusterWorker[]): Ta
 
 /** Convert a ClusterWorker to a dashboard Agent */
 export function clusterWorkerToAgent(cw: ClusterWorker): Agent {
+  const name = cw.name || cw.id || 'Unknown';
   return {
     id: cw.id,
-    name: cw.name,
-    letter: cw.name.charAt(0).toUpperCase(),
+    name,
+    letter: name.charAt(0).toUpperCase(),
     color: workerColor(cw.provider),
-    role: `${cw.provider}/${cw.model || 'unknown'}`,
+    role: `${cw.provider || 'unknown'}/${cw.model || 'unknown'}`,
     status: cw.status === 'busy' ? 'working' : cw.status === 'offline' ? 'offline' : 'idle',
     badge: cw.tier === 1 ? 'lead' : cw.tier === 2 ? 'spc' : undefined,
   };
