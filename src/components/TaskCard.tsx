@@ -1,7 +1,7 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { Clock, CheckCircle2, Tag } from 'lucide-react';
+import { Clock, CheckCircle2, Tag, CheckSquare, MessageSquare, Package } from 'lucide-react';
 import { cn, formatUTC, formatTokens } from '@/lib/utils';
 import type { Agent, Task } from '@/types';
 import { PRIORITY_CONFIG } from '@/types';
@@ -22,6 +22,13 @@ export default function TaskCard({ task, agents, onClick, compact = false, isDra
     : null;
 
   const isDone = task.status === 'done';
+
+  // Rich task badge counts
+  const checklist = task.checklist ?? [];
+  const checklistTotal = checklist.length;
+  const checklistChecked = checklist.filter(i => i.checked).length;
+  const commentCount = task.comments?.length ?? 0;
+  const deliverableCount = task.deliverables?.length ?? 0;
 
   return (
     <motion.div
@@ -113,7 +120,7 @@ export default function TaskCard({ task, agents, onClick, compact = false, isDra
         )}
       </div>
 
-      {/* Token Usage Badge */}
+      {/* Token Usage Badge (from remote's token tracking) */}
       {task.usage && task.usage.length > 0 && (() => {
         const totalIn = task.usage.reduce((s, u) => s + u.inputTokens, 0);
         const totalOut = task.usage.reduce((s, u) => s + u.outputTokens, 0);
@@ -128,6 +135,35 @@ export default function TaskCard({ task, agents, onClick, compact = false, isDra
           </div>
         );
       })()}
+
+      {/* Rich task badges (from our gateway additions) */}
+      {!compact && (checklistTotal > 0 || commentCount > 0 || deliverableCount > 0) && (
+        <div className="flex items-center gap-3 mb-3">
+          {checklistTotal > 0 && (
+            <span className={cn(
+              "inline-flex items-center gap-1 text-[10px] font-tabular px-1.5 py-0.5 rounded-md",
+              checklistChecked === checklistTotal
+                ? "bg-green-500/10 text-green-500"
+                : "bg-secondary text-muted-foreground/60"
+            )}>
+              <CheckSquare className="w-3 h-3" />
+              {checklistChecked}/{checklistTotal}
+            </span>
+          )}
+          {commentCount > 0 && (
+            <span className="inline-flex items-center gap-1 text-[10px] font-tabular px-1.5 py-0.5 rounded-md bg-secondary text-muted-foreground/60">
+              <MessageSquare className="w-3 h-3" />
+              {commentCount}
+            </span>
+          )}
+          {deliverableCount > 0 && (
+            <span className="inline-flex items-center gap-1 text-[10px] font-tabular px-1.5 py-0.5 rounded-md bg-secondary text-muted-foreground/60">
+              <Package className="w-3 h-3" />
+              {deliverableCount}
+            </span>
+          )}
+        </div>
+      )}
 
       {/* Footer: Assignee */}
       <div className="flex items-center justify-between pt-2 border-t border-border/30">

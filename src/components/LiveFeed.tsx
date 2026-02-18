@@ -20,8 +20,7 @@ interface LiveFeedProps {
 const typeFilters = [
   { id: 'all', label: 'All' },
   { id: 'task', label: 'Tasks' },
-  { id: 'comment', label: 'Comments' },
-  { id: 'decision', label: 'Decisions' },
+  { id: 'status', label: 'Workers' },
 ];
 
 const severityConfig = {

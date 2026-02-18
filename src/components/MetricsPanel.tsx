@@ -20,138 +20,121 @@ import {
   TrendingUp,
   CheckCircle2,
   Clock,
-  Zap,
+  Users,
   ChevronDown,
   BarChart3,
   PieChartIcon,
   Activity,
 } from 'lucide-react'
-import type { Task, Agent } from '@/types'
+import type { DashboardData, ClusterWorker } from '@/types'
+
+// Fallback mock data for charts (used when no real data)
+const mockActivityData = [
+  { day: 'Mon', tasks: 4 },
+  { day: 'Tue', tasks: 7 },
+  { day: 'Wed', tasks: 5 },
+  { day: 'Thu', tasks: 9 },
+  { day: 'Fri', tasks: 12 },
+  { day: 'Sat', tasks: 8 },
+  { day: 'Sun', tasks: 6 },
+]
+
+const providerColors: Record<string, string> = {
+  claude: '#e879a4',
+  openai: '#46a758',
+  deepseek: '#3e63dd',
+  groq: '#ffb224',
+  cerebras: '#8e4ec6',
+  ollama: '#00a2c7',
+}
+
+function getWorkerColor(provider: string): string {
+  return providerColors[provider] || '#697177'
+}
 
 interface MetricsPanelProps {
-  tasks: Task[]
-  agents: Agent[]
+  stats?: DashboardData['stats'] | null;
+  workers?: ClusterWorker[];
 }
 
 type ChartType = 'activity' | 'agents' | 'status'
 
-const DAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
-
-export function MetricsPanel({ tasks, agents }: MetricsPanelProps) {
+export function MetricsPanel({ stats: clusterStats, workers }: MetricsPanelProps = {}) {
   const [isExpanded, setIsExpanded] = useState(true)
   const [activeChart, setActiveChart] = useState<ChartType>('activity')
 
-  // ── Derive all data from props ──────────────────────────────────────
+  if (!clusterStats && (!workers || workers.length === 0)) {
+    return (
+      <div className="space-y-4 animate-pulse">
+        <div className="h-6 w-32 bg-secondary rounded" />
+        <div className="grid grid-cols-4 gap-4">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="h-24 bg-secondary rounded-xl" />
+          ))}
+        </div>
+      </div>
+    );
+  }
 
-  const stats = useMemo(() => {
-    const total = tasks.length
-    const done = tasks.filter(t => t.status === 'done').length
-    const inProgress = tasks.filter(t => t.status === 'in-progress').length
-
-    // Average completion time (done tasks with both timestamps)
-    const doneTasks = tasks.filter(t => t.status === 'done' && t.updatedAt && t.createdAt)
-    let avgTimeLabel = '—'
-    if (doneTasks.length > 0) {
-      const avgMs = doneTasks.reduce((sum, t) => sum + (t.updatedAt! - t.createdAt), 0) / doneTasks.length
-      const avgHours = avgMs / (1000 * 60 * 60)
-      avgTimeLabel = avgHours < 1
-        ? `${Math.round(avgHours * 60)}m`
-        : `${avgHours.toFixed(1)}h`
+  // Build stats from real cluster data when available
+  const displayStats = useMemo(() => {
+    if (!clusterStats) {
+      return [
+        { label: 'Total Tasks', value: '--', change: '', positive: true, icon: CheckCircle2 },
+        { label: 'Completed', value: '--', change: '', positive: true, icon: TrendingUp },
+        { label: 'In Queue', value: '--', change: '', positive: true, icon: Clock },
+        { label: 'Workers', value: '--', change: '', positive: true, icon: Users },
+      ]
     }
-
-    // Completion rate
-    const completionPct = total > 0 ? Math.round((done / total) * 100) : 0
-
+    const t = clusterStats.tasks
+    const w = clusterStats.workers
     return [
-      { label: 'Total Tasks', value: String(total), change: `${agents.filter(a => a.status === 'working').length} active`, positive: true, icon: CheckCircle2 },
-      { label: 'Completed', value: String(done), change: `${completionPct}%`, positive: true, icon: TrendingUp },
-      { label: 'Avg. Time', value: avgTimeLabel, change: `${doneTasks.length} done`, positive: true, icon: Clock },
-      { label: 'In Progress', value: String(inProgress), change: `${tasks.filter(t => t.status === 'review').length} review`, positive: true, icon: Zap },
+      { label: 'Total Tasks', value: String(t.total), change: `${t.queueDepth} queued`, positive: true, icon: CheckCircle2 },
+      { label: 'Completed', value: String(t.completed), change: t.failed > 0 ? `${t.failed} failed` : 'none failed', positive: t.failed === 0, icon: TrendingUp },
+      { label: 'Running', value: String(t.running), change: `${t.pending} pending`, positive: true, icon: Clock },
+      { label: 'Workers', value: `${w.idle + w.busy}/${w.total}`, change: `${w.busy} busy`, positive: w.offline === 0, icon: Users },
     ]
-  }, [tasks, agents])
+  }, [clusterStats])
 
-  const statusDistribution = useMemo(() => {
-    const counts = {
-      done: tasks.filter(t => t.status === 'done').length,
-      'in-progress': tasks.filter(t => t.status === 'in-progress').length,
-      inbox: tasks.filter(t => t.status === 'inbox').length,
-      assigned: tasks.filter(t => t.status === 'assigned').length,
-      review: tasks.filter(t => t.status === 'review').length,
-      waiting: tasks.filter(t => t.status === 'waiting').length,
-    }
-    return [
-      { name: 'Completed', value: counts.done, color: 'var(--green)', fallback: '#46a758' },
-      { name: 'In Progress', value: counts['in-progress'], color: 'var(--blue)', fallback: '#3e63dd' },
-      { name: 'Review', value: counts.review, color: 'var(--purple)', fallback: '#8e4ec6' },
-      { name: 'Pending', value: counts.inbox + counts.assigned, color: 'var(--muted-chart, #697177)', fallback: '#697177' },
-      { name: 'Waiting', value: counts.waiting, color: 'var(--red)', fallback: '#e54d2e' },
-    ].filter(d => d.value > 0)
-  }, [tasks])
-
+  // Build agent performance from real worker data
   const agentPerformance = useMemo(() => {
-    const agentMap = new Map(agents.map(a => [a.id, a]))
-    const counts: Record<string, { done: number; inProgress: number; other: number }> = {}
-    for (const task of tasks) {
-      if (task.assigneeId) {
-        if (!counts[task.assigneeId]) counts[task.assigneeId] = { done: 0, inProgress: 0, other: 0 }
-        if (task.status === 'done') counts[task.assigneeId].done++
-        else if (task.status === 'in-progress') counts[task.assigneeId].inProgress++
-        else counts[task.assigneeId].other++
-      }
-    }
-    return Object.entries(counts)
-      .map(([id, c]) => ({
-        name: agentMap.get(id)?.name || id.charAt(0).toUpperCase() + id.slice(1),
-        done: c.done,
-        inProgress: c.inProgress,
-        other: c.other,
-        total: c.done + c.inProgress + c.other,
-        color: agentMap.get(id)?.color || '#697177',
+    if (!workers || workers.length === 0) return []
+    return workers
+      .filter(w => w.status !== 'offline')
+      .map(w => ({
+        name: w.name,
+        completed: w.tasksCompleted,
+        color: getWorkerColor(w.provider),
       }))
-      .sort((a, b) => b.total - a.total)
+      .sort((a, b) => b.completed - a.completed)
       .slice(0, 8)
-  }, [tasks, agents])
+  }, [workers])
 
-  const activityData = useMemo(() => {
-    const dayCounts: Record<string, number> = {}
-    for (const name of DAY_NAMES) dayCounts[name] = 0
-    for (const task of tasks) {
-      const day = DAY_NAMES[new Date(task.createdAt).getDay()]
-      dayCounts[day]++
-    }
-    // Start from Monday
-    const order = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
-    return order.map(day => ({ day, tasks: dayCounts[day] }))
-  }, [tasks])
+  // Build status distribution from real stats
+  const statusDistribution = useMemo(() => {
+    if (!clusterStats) return [
+      { name: 'Completed', value: 0, color: '#22c55e', fallback: '#22c55e' },
+      { name: 'Running', value: 0, color: '#3b82f6', fallback: '#3b82f6' },
+      { name: 'Pending', value: 0, color: '#6b7280', fallback: '#6b7280' },
+      { name: 'Failed', value: 0, color: '#ef4444', fallback: '#ef4444' },
+    ]
+    const t = clusterStats.tasks
+    return [
+      { name: 'Completed', value: t.completed, color: '#22c55e', fallback: '#22c55e' },
+      { name: 'Running', value: t.running + t.assigned, color: '#3b82f6', fallback: '#3b82f6' },
+      { name: 'Pending', value: t.pending, color: '#6b7280', fallback: '#6b7280' },
+      { name: 'Failed', value: t.failed, color: '#ef4444', fallback: '#ef4444' },
+    ].filter(s => s.value > 0)
+  }, [clusterStats])
+
+  // Activity data: still use mock since we don't have time-series in the cluster yet
+  const activityData = mockActivityData
 
   const chartTabs: { id: ChartType; label: string; icon: React.ReactNode }[] = [
     { id: 'activity', label: 'Activity', icon: <Activity className="w-4 h-4" /> },
     { id: 'agents', label: 'Agents', icon: <BarChart3 className="w-4 h-4" /> },
     { id: 'status', label: 'Status', icon: <PieChartIcon className="w-4 h-4" /> },
   ]
-
-  // Empty state
-  if (tasks.length === 0) {
-    return (
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="card-premium rounded-2xl overflow-hidden"
-      >
-        <div className="px-6 py-4 flex items-center gap-3" style={{ background: 'var(--surface-hover)' }}>
-          <BarChart3 className="w-5 h-5" style={{ color: 'var(--purple)' }} />
-          <h2 className="font-semibold text-foreground">Metrics & Performance</h2>
-        </div>
-        <div className="px-6 pb-6 text-center py-8">
-          <BarChart3 className="w-8 h-8 text-muted-foreground/50 mx-auto mb-3" />
-          <p className="text-sm text-muted-foreground">No task data yet</p>
-          <p className="text-xs text-muted-foreground/60 mt-1">
-            Add JSON task files to your tasks directory to see metrics
-          </p>
-        </div>
-      </motion.div>
-    )
-  }
 
   return (
     <motion.div
@@ -189,7 +172,7 @@ export function MetricsPanel({ tasks, agents }: MetricsPanelProps) {
           >
             {/* Stats Row */}
             <div className="px-3 sm:px-6 pb-4 grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-4">
-              {stats.map((stat, index) => (
+              {displayStats.map((stat, index) => (
                 <motion.div
                   key={stat.label}
                   initial={{ opacity: 0, y: 10 }}
@@ -323,9 +306,7 @@ export function MetricsPanel({ tasks, agents }: MetricsPanelProps) {
                               color: 'hsl(var(--foreground))',
                             }}
                           />
-                          <Bar dataKey="done" stackId="tasks" fill="var(--green, #46a758)" radius={[0, 0, 0, 0]} name="Done" />
-                          <Bar dataKey="inProgress" stackId="tasks" fill="var(--blue, #3e63dd)" radius={[0, 0, 0, 0]} name="In Progress" />
-                          <Bar dataKey="other" stackId="tasks" fill="var(--muted-chart, #697177)" radius={[0, 4, 4, 0]} name="Other" />
+                          <Bar dataKey="completed" fill="var(--green, #46a758)" radius={[0, 4, 4, 0]} name="Completed" />
                         </BarChart>
                       </ResponsiveContainer>
                     ) : (

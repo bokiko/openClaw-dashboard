@@ -1,7 +1,9 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { X, Briefcase, Activity, Clock, ListChecks } from 'lucide-react';
+import { useState } from 'react';
+import { X, Briefcase, Activity, Clock, ListChecks, MessageSquare } from 'lucide-react';
+import AgentChatPanel from './AgentChatPanel';
 import { cn } from '@/lib/utils';
 import { timeAgo } from '@/lib/utils';
 import type { Agent, Task, FeedItem, TaskStatus } from '@/types';
@@ -23,6 +25,7 @@ export default function AgentModal({
   onClose, 
   onTaskClick 
 }: AgentModalProps) {
+  const [chatOpen, setChatOpen] = useState(false);
   const agentTasks = tasks.filter(t => t.assigneeId === agent.id);
   const agentActivity = feedItems.filter(f => f.agentId === agent.id).slice(0, 5);
   const isWorking = agent.status === 'working';
@@ -94,13 +97,13 @@ export default function AgentModal({
         <div className="flex items-center gap-3 p-3 rounded-xl bg-secondary/50 border border-border/50 mb-6">
           <span className={cn(
             "status-dot",
-            isWorking ? "working" : "idle"
+            isWorking ? "working" : agent.status === 'offline' ? "offline" : "idle"
           )} />
           <span className={cn(
             "text-sm font-medium",
-            isWorking ? "text-green-DEFAULT" : "text-amber-DEFAULT"
+            isWorking ? "text-green-DEFAULT" : agent.status === 'offline' ? "text-red-400" : "text-amber-DEFAULT"
           )}>
-            {isWorking ? 'Currently Working' : 'Idle'}
+            {isWorking ? 'Currently Working' : agent.status === 'offline' ? 'Offline' : 'Idle'}
           </span>
         </div>
 
@@ -243,17 +246,33 @@ export default function AgentModal({
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-end gap-2 mt-6 pt-4 border-t border-border/50">
+        <div className="flex items-center justify-between mt-6 pt-4 border-t border-border/50">
           <button
-            onClick={onClose}
-            className="px-4 py-2 text-sm font-medium rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
+            onClick={() => setChatOpen(true)}
+            className="flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg bg-foreground text-background hover:opacity-80 transition-all"
           >
-            Close
+            <MessageSquare className="w-4 h-4" />
+            Chat
           </button>
-          <span className="kbd">ESC</span>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={onClose}
+              className="px-4 py-2 text-sm font-medium rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
+            >
+              Close
+            </button>
+            <span className="kbd">ESC</span>
+          </div>
         </div>
         </motion.div>
       </motion.div>
+
+      {/* Chat Panel */}
+      <AgentChatPanel
+        agent={agent}
+        open={chatOpen}
+        onClose={() => setChatOpen(false)}
+      />
     </>
   );
 }

@@ -21,12 +21,13 @@ export default function AgentStrip({
 }: AgentStripProps) {
   const workingAgents = agents.filter(a => a.status === 'working');
   const idleAgents = agents.filter(a => a.status === 'idle');
+  const offlineAgents = agents.filter(a => a.status === 'offline');
 
   return (
     <div className="relative py-4 border-b border-border/50">
       {/* Background glow for active filter */}
       {selectedAgentId && (
-        <div 
+        <div
           className="absolute inset-0 opacity-5 pointer-events-none"
           style={{
             background: `radial-gradient(ellipse at center, ${agents.find(a => a.id === selectedAgentId)?.color || '#fff'} 0%, transparent 70%)`
@@ -55,7 +56,7 @@ export default function AgentStrip({
         {/* Separator */}
         <div className="w-px h-6 bg-border/50 mx-0.5 hidden sm:block" />
 
-        {/* Working Agents */}
+        {/* Working (Busy) Agents */}
         {workingAgents.map(agent => (
           <AgentButton
             key={agent.id}
@@ -83,6 +84,22 @@ export default function AgentStrip({
             onDoubleClick={() => onAgentDetail(agent.id)}
           />
         ))}
+
+        {/* Offline separator */}
+        {offlineAgents.length > 0 && (workingAgents.length > 0 || idleAgents.length > 0) && (
+          <div className="w-px h-6 bg-border/20 mx-1" />
+        )}
+
+        {/* Offline Agents */}
+        {offlineAgents.map(agent => (
+          <AgentButton
+            key={agent.id}
+            agent={agent}
+            isSelected={selectedAgentId === agent.id}
+            onClick={() => onAgentClick(agent.id)}
+            onDoubleClick={() => onAgentDetail(agent.id)}
+          />
+        ))}
       </div>
     </div>
   );
@@ -96,12 +113,13 @@ function AgentButton({
   onDoubleClick
 }: {
   agent: Agent;
-  tasks: Task[];
+  tasks?: Task[];
   isSelected: boolean;
   onClick: () => void;
   onDoubleClick: () => void;
 }) {
-  const agentTasks = tasks.filter(t => t.assigneeId === agent.id);
+  const isOffline = agent.status === 'offline';
+  const agentTasks = tasks?.filter(t => t.assigneeId === agent.id) ?? [];
   const doneCount = agentTasks.filter(t => t.status === 'done').length;
   const totalCount = agentTasks.length;
 
@@ -114,7 +132,8 @@ function AgentButton({
         isSelected
           ? "bg-secondary shadow-sm"
           : "hover:bg-secondary/30",
-        isSelected && "ring-1 ring-offset-1 ring-offset-background"
+        isSelected && "ring-1 ring-offset-1 ring-offset-background",
+        isOffline && "opacity-50"
       )}
       style={{
         ...(isSelected && {
@@ -132,7 +151,8 @@ function AgentButton({
 
       <span className={cn(
         "hidden sm:block font-medium transition-colors max-w-[8rem] truncate",
-        isSelected ? "text-foreground" : "text-muted-foreground"
+        isSelected ? "text-foreground" : "text-muted-foreground",
+        isOffline && "line-through"
       )}>
         {agent.name}
       </span>

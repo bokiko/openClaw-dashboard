@@ -46,6 +46,7 @@ export default function AgentAvatar({
   className,
 }: AgentAvatarProps) {
   const isWorking = agent.status === 'working';
+  const isOffline = agent.status === 'offline';
 
   return (
     <div 
@@ -95,13 +96,15 @@ export default function AgentAvatar({
             className={cn(
               "absolute rounded-full border-background",
               statusSizeClasses[size],
-              isWorking ? "bg-green-DEFAULT" : "bg-amber-DEFAULT",
+              isWorking ? "bg-green-DEFAULT" : isOffline ? "bg-red-400" : "bg-amber-DEFAULT",
               isWorking && "animate-pulse-soft"
             )}
             style={{
-              boxShadow: isWorking 
-                ? '0 0 6px rgba(70, 167, 88, 0.8)' 
-                : '0 0 4px rgba(255, 178, 36, 0.6)',
+              boxShadow: isWorking
+                ? '0 0 6px rgba(70, 167, 88, 0.8)'
+                : isOffline
+                  ? '0 0 4px rgba(239, 68, 68, 0.6)'
+                  : '0 0 4px rgba(255, 178, 36, 0.6)',
             }}
           />
         )}

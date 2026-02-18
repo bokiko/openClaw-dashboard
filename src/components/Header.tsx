@@ -6,6 +6,7 @@ import {
   Brain, Bot, Flame, Shield, Cpu, Rocket, Sparkles, Eye, type LucideIcon,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import NotificationBell from './NotificationBell';
 
 const LOGO_ICONS: Record<string, LucideIcon> = {
   zap: Zap, brain: Brain, bot: Bot, flame: Flame, shield: Shield,
@@ -20,6 +21,9 @@ interface HeaderProps {
   feedOpen: boolean;
   onFeedToggle: () => void;
   onCommandPalette?: () => void;
+  unreadNotifications: number;
+  notificationsOpen: boolean;
+  onNotificationsToggle: () => void;
   dashboardName?: string;
   dashboardSubtitle?: string;
   repoUrl?: string | null;
@@ -42,6 +46,9 @@ export default function Header({
   feedOpen,
   onFeedToggle,
   onCommandPalette,
+  unreadNotifications,
+  notificationsOpen,
+  onNotificationsToggle,
   dashboardName = 'OpenClaw',
   dashboardSubtitle = 'Mission Control',
   repoUrl,
@@ -223,6 +230,13 @@ export default function Header({
           >
             {updateIcon}
           </button>
+
+          {/* Notification Bell */}
+          <NotificationBell
+            unreadCount={unreadNotifications}
+            isOpen={notificationsOpen}
+            onClick={onNotificationsToggle}
+          />
 
           {/* Activity Feed Toggle */}
           <button

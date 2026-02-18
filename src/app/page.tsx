@@ -6,40 +6,48 @@ import Header from '@/components/Header';
 import AgentStrip from '@/components/AgentStrip';
 import MissionQueue from '@/components/MissionQueue';
 import LiveFeed from '@/components/LiveFeed';
-import TaskModal from '@/components/TaskModal';
+import NotificationPanel from '@/components/NotificationPanel';
+import TaskEditModal from '@/components/TaskEditModal';
+import TaskCreateModal from '@/components/TaskCreateModal';
 import AgentModal from '@/components/AgentModal';
 import { MetricsPanel } from '@/components/MetricsPanel';
-import { TokenMetricsPanel } from '@/components/TokenMetricsPanel';
+import { RoutineManager } from '@/components/RoutineManager';
+import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { CommandPalette } from '@/components/CommandPalette';
 import WelcomeScreen from '@/components/WelcomeScreen';
 import { toast } from 'sonner';
-import { useSwarmData } from '@/lib/useSwarmData';
+import { useClusterState } from '@/lib/useClusterState';
+import { WebSocketProvider } from '@/lib/WebSocketProvider';
 import type { TaskStatus } from '@/types';
 import { STATUS_CONFIG } from '@/types';
 
 // ── Page Component ──────────────────────────────────────────────────────
 
-export default function Home() {
-  const { agents, tasks, feed, loading, error, lastUpdated, updateTask, tokenStats, config, settings } = useSwarmData();
-  
+function DashboardContent() {
+  const {
+    agents, tasks, feed, notifications, stats, loading, error, lastUpdated, connected,
+    clusterWorkers, markNotificationRead, deleteNotification, clearAllNotifications,
+  } = useClusterState();
+
+  /** Task lanes are read-only from gateway — drag-drop shows a toast */
   const handleTaskMove = useCallback((taskId: string, newStatus: TaskStatus) => {
     const task = tasks.find(t => t.id === taskId);
-    updateTask(taskId, { status: newStatus });
-    
     const statusLabel = STATUS_CONFIG[newStatus]?.label || newStatus;
-    toast.success(`Task moved to ${statusLabel}`, {
-      description: task?.title,
-      duration: 2000,
+    toast('Sessions are read-only from gateway', {
+      description: `Cannot move "${task?.title?.slice(0, 40)}" to ${statusLabel}`,
+      duration: 3000,
     });
-  }, [tasks, updateTask]);
-  
+  }, [tasks]);
+
   const [mounted, setMounted] = useState(false);
   const [feedOpen, setFeedOpen] = useState(false);
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [selectedAgentId, setSelectedAgentId] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState('all');
   const [feedFilter, setFeedFilter] = useState('all');
   const [taskDetailId, setTaskDetailId] = useState<string | null>(null);
   const [agentDetailId, setAgentDetailId] = useState<string | null>(null);
+  const [createTaskOpen, setCreateTaskOpen] = useState(false);
 
   useEffect(() => { setMounted(true); }, []);
 
@@ -50,6 +58,7 @@ export default function Home() {
         setTaskDetailId(null);
         setAgentDetailId(null);
         setFeedOpen(false);
+        setNotificationsOpen(false);
       }
       // Cmd/Ctrl + K for command palette (future)
       if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
@@ -69,8 +78,17 @@ export default function Home() {
     setFeedOpen(prev => !prev);
   }, []);
 
+  const handleNotificationsToggle = useCallback(() => {
+    setNotificationsOpen(prev => !prev);
+  }, []);
+
+  const unreadNotifications = notifications.filter(n => !n.read).length;
+
   const handleCommand = useCallback((action: string) => {
     switch (action) {
+      case 'new-task':
+        setCreateTaskOpen(true);
+        break;
       case 'toggle-feed':
         setFeedOpen(prev => !prev);
         break;
@@ -138,13 +156,11 @@ export default function Home() {
             inProgressTasks={0}
             feedOpen={false}
             onFeedToggle={handleFeedToggle}
-            dashboardName={config?.name}
-            dashboardSubtitle={config?.subtitle}
-            repoUrl={config?.repoUrl}
-            logoIcon={settings?.logoIcon}
-            accentColor={settings?.accent?.primary}
+            unreadNotifications={0}
+            notificationsOpen={false}
+            onNotificationsToggle={handleNotificationsToggle}
           />
-          <WelcomeScreen dashboardName={config?.name} />
+          <WelcomeScreen />
         </div>
       </div>
     );
@@ -163,11 +179,9 @@ export default function Home() {
           inProgressTasks={inProgressTasks}
           feedOpen={feedOpen}
           onFeedToggle={handleFeedToggle}
-          dashboardName={config?.name}
-          dashboardSubtitle={config?.subtitle}
-          repoUrl={config?.repoUrl}
-          logoIcon={settings?.logoIcon}
-          accentColor={settings?.accent?.primary}
+          unreadNotifications={unreadNotifications}
+          notificationsOpen={notificationsOpen}
+          onNotificationsToggle={handleNotificationsToggle}
         />
 
         <AgentStrip
@@ -178,48 +192,40 @@ export default function Home() {
           onAgentDetail={(id) => setAgentDetailId(id)}
         />
 
-        <MissionQueue
-          tasks={tasks}
-          agents={agents}
-          selectedAgentId={selectedAgentId}
-          statusFilter={statusFilter}
-          onStatusFilterChange={setStatusFilter}
-          onTaskClick={(id) => setTaskDetailId(id)}
-          onTaskMove={handleTaskMove}
-        />
+        <ErrorBoundary>
+          <MissionQueue
+            tasks={tasks}
+            agents={agents}
+            selectedAgentId={selectedAgentId}
+            statusFilter={statusFilter}
+            onStatusFilterChange={setStatusFilter}
+            onTaskClick={(id) => setTaskDetailId(id)}
+            onTaskMove={handleTaskMove}
+          />
+        </ErrorBoundary>
 
-        {/* Metrics Panels (conditional via settings) */}
-        <div className="mt-6 sm:mt-8 mb-6 sm:mb-8 space-y-4 sm:space-y-6 px-2 sm:px-0">
-          {(settings?.showMetricsPanel !== false) && <MetricsPanel tasks={tasks} agents={agents} />}
-          {(settings?.showTokenPanel !== false) && (
-            <TokenMetricsPanel tokenStats={tokenStats} />
-          )}
-        </div>
-        
-        {/* Footer */}
-        <div className="mt-8 pb-6 flex items-center justify-center gap-2 text-xs text-muted-foreground/40">
-          <span>{config?.name || 'OpenClaw'} Dashboard{config?.version ? ` v${config.version}` : ''}</span>
-          {config?.repoUrl && (
-            <>
-              <span>·</span>
-              <a
-                href={config.repoUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="hover:text-muted-foreground transition-colors"
-              >
-                Star on GitHub
-              </a>
-            </>
-          )}
+        {/* Routines */}
+        <div className="mt-8">
+          <ErrorBoundary>
+            <RoutineManager />
+          </ErrorBoundary>
         </div>
 
-        {/* Last updated indicator */}
-        {lastUpdated && (
-          <div className="fixed bottom-4 right-4 text-xs text-muted-foreground/50">
-            Updated {new Date(lastUpdated).toLocaleTimeString()}
-          </div>
-        )}
+        {/* Metrics Panel */}
+        <div className="mt-8 mb-8">
+          <ErrorBoundary>
+            <MetricsPanel stats={stats} workers={clusterWorkers} />
+          </ErrorBoundary>
+        </div>
+
+        {/* Connection + last updated indicator */}
+        <div className="fixed bottom-4 right-4 flex items-center gap-2 text-xs text-muted-foreground/50">
+          <div className={`w-1.5 h-1.5 rounded-full ${connected ? 'bg-green-500' : 'bg-red-500 animate-pulse'}`} />
+          <span>{connected ? 'Live' : 'Reconnecting...'}</span>
+          {lastUpdated && (
+            <span>| {new Date(lastUpdated).toLocaleTimeString()}</span>
+          )}
+        </div>
       </div>
 
       {/* Feed Drawer */}
@@ -237,16 +243,35 @@ export default function Home() {
         )}
       </AnimatePresence>
 
-      {/* Task Detail Modal */}
+      {/* Notification Panel */}
       <AnimatePresence>
-        {taskDetail && (
-          <TaskModal
-            task={taskDetail}
-            agents={agents}
-            onClose={() => setTaskDetailId(null)}
+        {notificationsOpen && (
+          <NotificationPanel
+            notifications={notifications}
+            onMarkRead={markNotificationRead}
+            onDelete={deleteNotification}
+            onClearAll={clearAllNotifications}
+            onClose={() => setNotificationsOpen(false)}
           />
         )}
       </AnimatePresence>
+
+      {/* Task Create Modal */}
+      <TaskCreateModal
+        open={createTaskOpen}
+        onOpenChange={setCreateTaskOpen}
+        agents={agents}
+      />
+
+      {/* Task Edit Modal */}
+      {taskDetail && (
+        <TaskEditModal
+          task={taskDetail}
+          agents={agents}
+          open={!!taskDetailId}
+          onOpenChange={(open) => { if (!open) setTaskDetailId(null); }}
+        />
+      )}
 
       {/* Agent Detail Modal */}
       <AnimatePresence>
@@ -261,5 +286,13 @@ export default function Home() {
         )}
       </AnimatePresence>
     </div>
+  );
+}
+
+export default function Home() {
+  return (
+    <WebSocketProvider>
+      <DashboardContent />
+    </WebSocketProvider>
   );
 }
