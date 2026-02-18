@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect, useCallback, useReducer } from 'react';
-import { useWebSocket } from './useWebSocket';
 import type { Agent, Task, FeedItem, DashboardData, ClusterTask, ClusterWorker } from '@/types';
 import { clusterTaskToTask, clusterWorkerToAgent, activityToFeedItem } from '@/types';
 import type { Notification } from '@/types';
@@ -188,8 +187,8 @@ export function useClusterState() {
     }
   }, [fetchData]);
 
-  // Subscribe to all events
-  const { connected } = useWebSocket([], handleWsEvent);
+  // Gateway mode is HTTP-only (no browser WebSocket needed)
+  const connected = !error;
 
   // Notification actions (optimistic + server sync)
   const markNotificationRead = useCallback(async (id: string) => {

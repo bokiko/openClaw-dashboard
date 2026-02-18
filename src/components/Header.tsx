@@ -1,8 +1,7 @@
 'use client';
 
-import { useState, useCallback, useEffect } from 'react';
 import {
-  Activity, Zap, Command, Github, Download, Check, Loader2,
+  Activity, Zap, Command, Github,
   Brain, Bot, Flame, Shield, Cpu, Rocket, Sparkles, Eye, type LucideIcon,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -31,13 +30,6 @@ interface HeaderProps {
   accentColor?: string;
 }
 
-type UpdateStatus = 'idle' | 'checking' | 'current' | 'available' | 'error';
-
-interface UpdateInfo {
-  message: string;
-  behind?: number;
-}
-
 export default function Header({
   activeAgents,
   totalAgents,
@@ -55,69 +47,6 @@ export default function Header({
   logoIcon = 'zap',
 }: HeaderProps) {
   const LogoIcon = LOGO_ICONS[logoIcon] || Zap;
-  const [updateStatus, setUpdateStatus] = useState<UpdateStatus>('idle');
-  const [updateInfo, setUpdateInfo] = useState<UpdateInfo | null>(null);
-  const [bannerDismissed, setBannerDismissed] = useState(false);
-
-  const checkForUpdates = useCallback(async () => {
-    if (updateStatus === 'checking') return;
-    setUpdateStatus('checking');
-    setBannerDismissed(false);
-
-    try {
-      const headers: HeadersInit = {};
-      const apiKey = process.env.NEXT_PUBLIC_OPENCLAW_API_KEY;
-      if (apiKey) headers['Authorization'] = `Bearer ${apiKey}`;
-
-      const res = await fetch('/api/update', { headers });
-      const data = await res.json();
-
-      if (data.status === 'current') {
-        setUpdateStatus('current');
-        setUpdateInfo({ message: 'Up to date' });
-        setTimeout(() => setUpdateStatus('idle'), 3000);
-      } else if (data.status === 'update-available') {
-        setUpdateStatus('available');
-        setUpdateInfo({
-          message: data.message,
-          behind: data.behind,
-        });
-      } else {
-        setUpdateStatus('error');
-        setTimeout(() => setUpdateStatus('idle'), 4000);
-      }
-    } catch {
-      setUpdateStatus('error');
-      setTimeout(() => setUpdateStatus('idle'), 4000);
-    }
-  }, [updateStatus]);
-
-  // Check on mount (silent)
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      checkForUpdates();
-    }, 5000); // 5s after page load
-    return () => clearTimeout(timer);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  const updateIcon = {
-    idle: <Download className="w-4 h-4" />,
-    checking: <Loader2 className="w-4 h-4 animate-spin" />,
-    current: <Check className="w-4 h-4" />,
-    available: <Download className="w-4 h-4" />,
-    error: <Download className="w-4 h-4" />,
-  }[updateStatus];
-
-  const updateButtonStyle = {
-    idle: 'bg-secondary/50 text-muted-foreground border-border hover:border-border/80 hover:text-foreground hover:bg-secondary',
-    checking: 'bg-secondary/50 text-muted-foreground border-border cursor-wait',
-    current: 'text-foreground border',
-    available: 'text-foreground border animate-pulse-soft',
-    error: 'bg-secondary/50 text-muted-foreground border-border',
-  }[updateStatus];
-
-  const showBanner = updateStatus === 'available' && updateInfo && !bannerDismissed;
 
   return (
     <div>
@@ -203,34 +132,6 @@ export default function Header({
             </a>
           )}
 
-          {/* Check for Updates Button */}
-          <button
-            onClick={checkForUpdates}
-            disabled={updateStatus === 'checking'}
-            className={cn(
-              "w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center transition-all duration-200 border",
-              updateButtonStyle,
-            )}
-            style={updateStatus === 'current' ? {
-              background: 'var(--accent-primary-light)',
-              color: 'var(--accent-primary)',
-              borderColor: 'color-mix(in srgb, var(--accent-primary) 30%, transparent)',
-            } : updateStatus === 'available' ? {
-              background: 'var(--accent-primary-light)',
-              color: 'var(--accent-primary)',
-              borderColor: 'color-mix(in srgb, var(--accent-primary) 30%, transparent)',
-            } : undefined}
-            title={
-              updateStatus === 'idle' ? 'Check for updates' :
-              updateStatus === 'checking' ? 'Checking...' :
-              updateStatus === 'current' ? 'Up to date' :
-              updateStatus === 'available' ? 'Update available' :
-              'Check for updates'
-            }
-          >
-            {updateIcon}
-          </button>
-
           {/* Notification Bell */}
           <NotificationBell
             unreadCount={unreadNotifications}
@@ -265,47 +166,6 @@ export default function Header({
           </button>
         </div>
       </header>
-
-      {/* Update Available Banner */}
-      {showBanner && (
-        <div
-          className="mb-4 px-3 sm:px-4 py-2.5 sm:py-3 rounded-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 sm:gap-4 text-sm border"
-          style={{
-            background: 'var(--accent-primary-light)',
-            borderColor: 'color-mix(in srgb, var(--accent-primary) 30%, transparent)',
-          }}
-        >
-          <div className="flex items-center gap-3 min-w-0">
-            <Download className="w-4 h-4 flex-shrink-0" style={{ color: 'var(--accent-primary)' }} />
-            <span className="text-foreground">
-              <strong>{updateInfo.message}</strong>
-            </span>
-          </div>
-          <div className="flex items-center gap-2 flex-shrink-0">
-            {repoUrl && (
-              <a
-                href={repoUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="px-3 py-1.5 rounded-lg text-xs font-medium transition-colors"
-                style={{
-                  background: 'var(--accent-primary)',
-                  color: '#fff',
-                }}
-              >
-                View
-              </a>
-            )}
-            <button
-              onClick={() => setBannerDismissed(true)}
-              className="px-3 py-1.5 rounded-lg text-xs font-medium text-muted-foreground hover:text-foreground transition-colors"
-              style={{ background: 'var(--surface-subtle)' }}
-            >
-              Dismiss
-            </button>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

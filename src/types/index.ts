@@ -217,6 +217,26 @@ export interface GatewayChannelStatus {
   details: Record<string, unknown>;
 }
 
+/** Gateway routine shape (from cronJobToRoutine mapper) */
+export interface GatewayRoutine {
+  id: string;
+  name: string;
+  enabled: boolean;
+  schedule: {
+    type: string;
+    daysOfWeek: number[];
+    hour: number;
+    minute: number;
+    timezone: string;
+  };
+  prompt: string;
+  priority: number;
+  requiredSkills: string[];
+  lastTriggeredAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
 // ── Config constants ─────────────────────────────────────────────────
 
 export const STATUS_CONFIG: Record<TaskStatus, StatusConfig> = {

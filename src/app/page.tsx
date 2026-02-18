@@ -22,7 +22,6 @@ import { TaskCardSkeleton } from '@/components/skeletons/TaskCardSkeleton';
 import { MetricsSkeleton } from '@/components/skeletons/MetricsSkeleton';
 import { toast } from 'sonner';
 import { useClusterState } from '@/lib/useClusterState';
-import { WebSocketProvider } from '@/lib/WebSocketProvider';
 import type { TaskStatus } from '@/types';
 import { STATUS_CONFIG } from '@/types';
 
@@ -334,9 +333,5 @@ function DashboardContent() {
 }
 
 export default function Home() {
-  return (
-    <WebSocketProvider>
-      <DashboardContent />
-    </WebSocketProvider>
-  );
+  return <DashboardContent />;
 }

@@ -15,7 +15,7 @@ import type {
   DashboardData,
   Priority,
 } from '@/types';
-import type { Routine } from '@/components/RoutineCard';
+import type { GatewayRoutine } from '@/types';
 
 const FIVE_MINUTES = 5 * 60 * 1000;
 
@@ -129,10 +129,10 @@ export function cronRunToActivity(run: GatewayCronRun, cronName: string): Activi
   };
 }
 
-// ── CronJob → Routine ───────────────────────────────────────────────
+// ── CronJob → GatewayRoutine ───────────────────────────────────────────────
 
-export function cronJobToRoutine(job: GatewayCronJob): Routine {
-  // Parse cron expr to extract schedule info for the Routine card
+export function cronJobToRoutine(job: GatewayCronJob): GatewayRoutine {
+  // Parse cron expr to extract schedule info for the routine card
   const schedule = parseCronSchedule(job.schedule);
 
   return {
@@ -149,7 +149,7 @@ export function cronJobToRoutine(job: GatewayCronJob): Routine {
   };
 }
 
-function parseCronSchedule(sched: GatewayCronJob['schedule']): Routine['schedule'] {
+function parseCronSchedule(sched: GatewayCronJob['schedule']): GatewayRoutine['schedule'] {
   // Gateway uses cron expressions like "0 9 * * 1,3,5"
   // Try to extract day-of-week and time from the expr
   const parts = sched.expr.trim().split(/\s+/);
