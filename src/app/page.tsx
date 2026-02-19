@@ -30,7 +30,7 @@ import { STATUS_CONFIG } from '@/types';
 function DashboardContent() {
   const {
     agents, tasks, feed, notifications, stats, loading, error, lastUpdated, connected,
-    clusterWorkers, markNotificationRead, deleteNotification, clearAllNotifications,
+    clusterWorkers, dataSource, markNotificationRead, deleteNotification, clearAllNotifications,
   } = useClusterState();
 
   /** Task lanes are read-only from gateway — drag-drop shows a toast */
@@ -296,6 +296,7 @@ function DashboardContent() {
             taskId={taskDetailId}
             agents={agents}
             initialTask={tasks.find(t => t.id === taskDetailId) ?? undefined}
+            readOnlyFromGateway={dataSource === 'gateway'}
             onClose={() => setTaskDetailId(null)}
             onUpdated={() => {
               toast.success('Task updated');

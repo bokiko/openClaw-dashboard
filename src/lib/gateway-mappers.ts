@@ -19,6 +19,66 @@ import type { GatewayRoutine } from '@/types';
 
 const FIVE_MINUTES = 5 * 60 * 1000;
 
+// ── Display name helpers ────────────────────────────────────────────
+
+/** Derive a short, human-readable title from a gateway session key.
+ *  e.g. "agent:main:main" → "Main (default)"
+ *       "agent:main:subagent:abc123-..." → "Subagent (abc123…)"
+ *       "agent:main:slack:channel:deliverables" → "Slack #deliverables"
+ */
+export function sessionKeyToTitle(key: string): string {
+  if (!key) return 'Untitled session';
+  const parts = key.split(':');
+
+  // agent:<agentId>:main → "<Agent> (default)"
+  if (parts.length === 3 && parts[0] === 'agent' && parts[2] === 'main') {
+    const agent = parts[1];
+    return `${capitalize(agent)} (default)`;
+  }
+
+  // agent:<agentId>:subagent:<uuid> → "Subagent (<short-uuid>…)"
+  if (parts.length >= 4 && parts[0] === 'agent' && parts[2] === 'subagent') {
+    const uuid = parts[3];
+    return `Subagent (${uuid.slice(0, 8)}…)`;
+  }
+
+  // agent:<agentId>:slack:channel:<name> → "Slack #<name>"
+  if (parts.length >= 5 && parts[0] === 'agent' && parts[2] === 'slack' && parts[3] === 'channel') {
+    return `Slack #${parts[4]}`;
+  }
+
+  // agent:<agentId>:<kind> → "<Kind> session"
+  if (parts.length >= 3 && parts[0] === 'agent') {
+    return `${capitalize(parts[2])} session`;
+  }
+
+  // Fallback: last segment capitalized, or truncate
+  const last = parts[parts.length - 1];
+  if (last && last.length <= 32) return capitalize(last);
+  return key.slice(0, 32) + '…';
+}
+
+const AGENT_DISPLAY_NAMES: Record<string, string> = {
+  main: 'Main',
+  research: 'Research',
+  scout: 'Scout',
+  spark: 'Spark',
+  alpha: 'Alpha',
+  beta: 'Beta',
+  writer: 'Writer',
+  reviewer: 'Reviewer',
+  planner: 'Planner',
+};
+
+/** Derive a display name from a gateway agent ID. */
+export function agentIdToDisplayName(id: string): string {
+  return AGENT_DISPLAY_NAMES[id] ?? capitalize(id);
+}
+
+function capitalize(s: string): string {
+  return s.charAt(0).toUpperCase() + s.slice(1);
+}
+
 // ── Session → ClusterTask ───────────────────────────────────────────
 
 function deriveSessionStatus(session: GatewaySession): string {
@@ -43,7 +103,7 @@ export function sessionToClusterTask(session: GatewaySession): ClusterTask {
   return {
     id: session.sessionId,
     type: session.kind || 'session',
-    prompt: session.key || 'Untitled session',
+    prompt: sessionKeyToTitle(session.key),
     context: { model: session.model, tokens: session.contextTokens },
     priority,
     requiredSkills: [],
@@ -87,7 +147,7 @@ export function agentToClusterWorker(agent: AgentInfo): ClusterWorker {
 
   return {
     id: agent.id,
-    name: agent.id,
+    name: agentIdToDisplayName(agent.id),
     ip: '127.0.0.1',
     port: 0,
     skills: [],
@@ -249,5 +309,6 @@ export function buildDashboardData(
       uptime: 0,
     },
     timestamp: Date.now(),
+    dataSource: 'gateway',
   };
 }

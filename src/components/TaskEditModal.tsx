@@ -10,6 +10,7 @@ interface TaskEditModalProps {
   taskId: string;
   agents: Agent[];
   initialTask?: Task;
+  readOnlyFromGateway?: boolean;
   onClose: () => void;
   onUpdated: () => void;
 }
@@ -34,7 +35,7 @@ function taskToDetail(t: Task): TaskDetail {
   return { ...t, parentId: undefined, sortOrder: 0, checklist, comments, deliverables };
 }
 
-export default function TaskEditModal({ taskId, agents, initialTask, onClose, onUpdated }: TaskEditModalProps) {
+export default function TaskEditModal({ taskId, agents, initialTask, readOnlyFromGateway, onClose, onUpdated }: TaskEditModalProps) {
   const [task, setTask] = useState<TaskDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -68,13 +69,19 @@ export default function TaskEditModal({ taskId, agents, initialTask, onClose, on
   }, []);
 
   const fetchTask = useCallback(async () => {
+    // Gateway mode: skip DB fetch entirely, use in-memory task
+    if (readOnlyFromGateway && initialTask) {
+      populateForm(taskToDetail(initialTask), true);
+      setLoading(false);
+      return;
+    }
     try {
       const res = await fetch(`/api/tasks/${taskId}`);
       if (!res.ok) throw new Error('Failed to load task');
       const data = await res.json() as TaskDetail;
       populateForm(data);
     } catch (err) {
-      // Fall back to in-memory task (gateway mode)
+      // Fall back to in-memory task if available
       if (initialTask) {
         populateForm(taskToDetail(initialTask), true);
       } else {
@@ -83,7 +90,7 @@ export default function TaskEditModal({ taskId, agents, initialTask, onClose, on
     } finally {
       setLoading(false);
     }
-  }, [taskId, initialTask, populateForm]);
+  }, [taskId, initialTask, readOnlyFromGateway, populateForm]);
 
   useEffect(() => { fetchTask(); }, [fetchTask]);
 
@@ -344,18 +351,25 @@ export default function TaskEditModal({ taskId, agents, initialTask, onClose, on
             {/* Comments Tab */}
             {activeTab === 'comments' && (
               <div className="space-y-3">
-                {task?.comments?.map(comment => (
-                  <div key={comment.id} className="p-3 bg-muted/30 rounded-lg">
-                    <div className="flex items-center gap-2 mb-1">
-                      <MessageSquare className="w-3 h-3 text-muted-foreground" />
-                      <span className="text-xs font-medium text-muted-foreground">{comment.author}</span>
-                      <span className="text-xs text-muted-foreground/50">
-                        {new Date(comment.createdAt).toLocaleString()}
-                      </span>
+                {task?.comments && task.comments.length > 0 ? (
+                  task.comments.map(comment => (
+                    <div key={comment.id} className="p-3 bg-muted/30 rounded-lg">
+                      <div className="flex items-center gap-2 mb-1">
+                        <MessageSquare className="w-3 h-3 text-muted-foreground" />
+                        <span className="text-xs font-medium text-muted-foreground">{comment.author}</span>
+                        <span className="text-xs text-muted-foreground/50">
+                          {new Date(comment.createdAt).toLocaleString()}
+                        </span>
+                      </div>
+                      <p className="text-sm text-foreground">{comment.content}</p>
                     </div>
-                    <p className="text-sm text-foreground">{comment.content}</p>
-                  </div>
-                ))}
+                  ))
+                ) : readOnly ? (
+                  <p className="text-sm text-muted-foreground py-4 text-center">
+                    Comments are not available for gateway sessions.
+                    Tasks from the OpenClaw gateway are read-only.
+                  </p>
+                ) : null}
                 {!readOnly && (
                   <div className="flex gap-2">
                     <input type="text" value={newComment} onChange={(e) => setNewComment(e.target.value)}

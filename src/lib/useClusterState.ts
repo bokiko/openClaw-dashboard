@@ -13,6 +13,7 @@ interface ClusterState {
   stats: DashboardData['stats'] | null;
   timestamp: number | null;
   refreshInterval: number;
+  dataSource: 'gateway' | 'db' | null;
 }
 
 type ClusterAction =
@@ -41,6 +42,7 @@ function clusterReducer(state: ClusterState, action: ClusterAction): ClusterStat
         stats: action.payload.stats,
         timestamp: action.payload.timestamp,
         refreshInterval: action.payload.refreshInterval ?? state.refreshInterval,
+        dataSource: action.payload.dataSource ?? state.dataSource,
       };
 
     case 'TASK_CREATED':
@@ -123,6 +125,7 @@ export function useClusterState() {
     stats: null,
     timestamp: null,
     refreshInterval: 30000,
+    dataSource: null,
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -239,6 +242,7 @@ export function useClusterState() {
     lastUpdated: state.timestamp,
     clusterTasks: state.tasks,
     clusterWorkers: state.workers,
+    dataSource: state.dataSource,
     markNotificationRead,
     deleteNotification,
     clearAllNotifications,
