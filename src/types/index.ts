@@ -166,6 +166,25 @@ export interface DashboardData {
   refreshInterval?: number;
   dataSource?: 'gateway' | 'db';
   spawnedSessions?: SpawnedSession[];
+  cronJobs?: GatewayCronJob[];
+  cronRuns?: GatewayCronRun[];
+}
+
+// ── Work Item (Team Activity view) ──────────────────────────────────
+
+export interface WorkItem {
+  id: string;
+  agentId: string;
+  type: 'cron' | 'spawn' | 'direct';
+  title: string;
+  description: string;
+  status: 'active' | 'completed' | 'failed';
+  model: string;
+  tokens?: number;
+  duration?: number;         // ms
+  timestamp: number;
+  team?: string;
+  transcriptPath?: string;   // Phase 2
 }
 
 // ── Gateway types (from OpenClaw gateway WS RPC) ────────────────────

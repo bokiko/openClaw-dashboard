@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useReducer } from 'react';
-import type { Agent, Task, FeedItem, DashboardData, ClusterTask, ClusterWorker, SpawnedSession } from '@/types';
+import type { Agent, Task, FeedItem, DashboardData, ClusterTask, ClusterWorker, SpawnedSession, GatewayCronJob, GatewayCronRun } from '@/types';
 import { clusterTaskToTask, clusterWorkerToAgent, activityToFeedItem } from '@/types';
 import type { Notification } from '@/types';
 
@@ -15,6 +15,8 @@ interface ClusterState {
   refreshInterval: number;
   dataSource: 'gateway' | 'db' | null;
   spawnedSessions: SpawnedSession[];
+  cronJobs: GatewayCronJob[];
+  cronRuns: GatewayCronRun[];
 }
 
 type ClusterAction =
@@ -45,6 +47,8 @@ function clusterReducer(state: ClusterState, action: ClusterAction): ClusterStat
         refreshInterval: action.payload.refreshInterval ?? state.refreshInterval,
         dataSource: action.payload.dataSource ?? state.dataSource,
         spawnedSessions: action.payload.spawnedSessions ?? [],
+        cronJobs: action.payload.cronJobs ?? [],
+        cronRuns: action.payload.cronRuns ?? [],
       };
 
     case 'TASK_CREATED':
@@ -129,6 +133,8 @@ export function useClusterState() {
     refreshInterval: 30000,
     dataSource: null,
     spawnedSessions: [],
+    cronJobs: [],
+    cronRuns: [],
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -250,6 +256,8 @@ export function useClusterState() {
     clusterWorkers: state.workers,
     dataSource: state.dataSource,
     spawnedSessions: state.spawnedSessions,
+    cronJobs: state.cronJobs,
+    cronRuns: state.cronRuns,
     markNotificationRead,
     deleteNotification,
     clearAllNotifications,

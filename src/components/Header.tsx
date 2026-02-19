@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import {
   Activity, Zap, Command, Github, Sun, Moon,
   Brain, Bot, Flame, Shield, Cpu, Rocket, Sparkles, Eye, type LucideIcon,
@@ -29,6 +30,7 @@ interface HeaderProps {
   repoUrl?: string | null;
   logoIcon?: string;
   accentColor?: string;
+  currentView?: 'dashboard' | 'activity';
 }
 
 export default function Header({
@@ -46,6 +48,7 @@ export default function Header({
   dashboardSubtitle = 'Mission Control',
   repoUrl,
   logoIcon = 'zap',
+  currentView = 'dashboard',
 }: HeaderProps) {
   const LogoIcon = LOGO_ICONS[logoIcon] || Zap;
   const { theme, toggle: toggleTheme } = useTheme();
@@ -72,6 +75,22 @@ export default function Header({
               {dashboardName}
             </h1>
             <p className="text-[10px] sm:text-xs text-muted-foreground truncate">{dashboardSubtitle}</p>
+          </div>
+
+          {/* View Toggle */}
+          <div className="hidden sm:flex items-center gap-1 bg-secondary/30 rounded-lg p-0.5 ml-2">
+            <Link href="/"
+              className={cn("px-3 py-1 rounded-md text-xs font-medium transition-colors",
+                currentView === 'dashboard' ? "bg-secondary text-foreground" : "text-muted-foreground hover:text-foreground"
+              )}>
+              Mission Control
+            </Link>
+            <Link href="/activity"
+              className={cn("px-3 py-1 rounded-md text-xs font-medium transition-colors",
+                currentView === 'activity' ? "bg-secondary text-foreground" : "text-muted-foreground hover:text-foreground"
+              )}>
+              Team Activity
+            </Link>
           </div>
         </div>
 

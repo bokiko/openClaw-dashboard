@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
 import { AnimatePresence } from 'framer-motion';
 import Header from '@/components/Header';
 import AgentStrip from '@/components/AgentStrip';
@@ -35,6 +36,7 @@ function DashboardContent() {
     markNotificationRead, deleteNotification, clearAllNotifications,
   } = useClusterState();
   const { toggle: toggleTheme } = useTheme();
+  const router = useRouter();
 
   /** Task lanes are read-only from gateway — drag-drop shows a toast */
   const handleTaskMove = useCallback((taskId: string, newStatus: TaskStatus) => {
@@ -116,6 +118,12 @@ function DashboardContent() {
       case 'toggle-theme':
         toggleTheme();
         break;
+      case 'goto-activity':
+        router.push('/activity');
+        break;
+      case 'goto-dashboard':
+        // Already on dashboard
+        break;
       default:
         // Dynamic agent filter: "filter-<agentId>"
         if (action.startsWith('filter-')) {
@@ -125,7 +133,7 @@ function DashboardContent() {
           console.log('Command:', action);
         }
     }
-  }, [toggleTheme]);
+  }, [toggleTheme, router]);
 
   const activeAgents = agents.filter(a => a.status === 'working').length;
   const inProgressTasks = tasks.filter(t => t.status === 'in-progress').length;
@@ -215,6 +223,7 @@ function DashboardContent() {
           unreadNotifications={unreadNotifications}
           notificationsOpen={notificationsOpen}
           onNotificationsToggle={handleNotificationsToggle}
+          currentView="dashboard"
         />
 
         <AgentStrip

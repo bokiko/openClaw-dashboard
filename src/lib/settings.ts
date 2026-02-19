@@ -51,6 +51,8 @@ export interface DashboardSettings {
     color: string;
     role: string;
     badge?: 'lead' | 'spc';
+    description?: string;
+    specialty?: string;
   }> | null; // null = use default roster
 }
 

@@ -19,6 +19,7 @@ import {
   MessageSquare,
   Activity,
   FileText,
+  BarChart3,
 } from 'lucide-react'
 
 interface CommandPaletteProps {
@@ -49,6 +50,8 @@ const GROUPS: CommandGroup[] = [
   {
     heading: 'Navigation',
     commands: [
+      { id: 'goto-dashboard', label: 'Switch to Mission Control', icon: BarChart3, shortcut: '1' },
+      { id: 'goto-activity', label: 'Switch to Team Activity', icon: Users, shortcut: '2' },
       { id: 'view-agents', label: 'View All Agents', icon: Users, shortcut: 'A' },
       { id: 'view-tasks', label: 'View All Tasks', icon: ListTodo, shortcut: 'T' },
       { id: 'view-messages', label: 'View Messages', icon: MessageSquare, shortcut: 'M' },

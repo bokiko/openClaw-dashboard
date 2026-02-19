@@ -371,5 +371,7 @@ export function buildDashboardData(
     timestamp: Date.now(),
     dataSource: 'gateway',
     spawnedSessions,
+    cronJobs,
+    cronRuns,
   };
 }
