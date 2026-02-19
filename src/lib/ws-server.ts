@@ -31,28 +31,26 @@ export function setupWebSocket(server: HttpServer): WebSocketServer {
     });
   });
 
-  wss.on('connection', (ws: WebSocket, _req: IncomingMessage, token?: string) => {
+  wss.on('connection', async (ws: WebSocket, _req: IncomingMessage, token?: string) => {
+    const authEnabled = !!(process.env.JWT_SECRET || process.env.DASHBOARD_SECRET);
+
+    // Verify token BEFORE accepting the connection
+    if (authEnabled) {
+      if (!token) {
+        ws.close(4001, 'Authentication required');
+        return;
+      }
+      const valid = await verifyWsTokenAsync(token);
+      if (!valid) {
+        ws.close(4001, 'Invalid token');
+        return;
+      }
+    }
+
     const client: WsClient = { ws, alive: true };
     clients.set(ws, client);
 
-    // Verify token if auth is enabled
-    if (process.env.DASHBOARD_SECRET && !token) {
-      ws.close(4001, 'Authentication required');
-      clients.delete(ws);
-      return;
-    }
-
-    // If auth enabled, verify async (but we already allowed connection)
-    if (process.env.DASHBOARD_SECRET && token) {
-      verifyWsTokenAsync(token).then(valid => {
-        if (!valid) {
-          ws.close(4001, 'Invalid token');
-          clients.delete(ws);
-        }
-      });
-    }
-
-    // Send connected event
+    // Send connected event only after successful auth
     sendTo(ws, 'connected', { clientId: crypto.randomUUID() });
 
     ws.on('pong', () => {
