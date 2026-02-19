@@ -26,7 +26,7 @@ import {
   PieChartIcon,
   Activity,
 } from 'lucide-react'
-import type { DashboardData, ClusterWorker, FeedItem } from '@/types'
+import type { DashboardData, ClusterWorker, ClusterTask, FeedItem } from '@/types'
 
 // Fallback mock data for charts (used when no real data)
 const mockActivityData = [
@@ -56,12 +56,19 @@ interface MetricsPanelProps {
   stats?: DashboardData['stats'] | null;
   workers?: ClusterWorker[];
   feed?: FeedItem[];
+  tasks?: ClusterTask[];
 }
 
 type ChartType = 'activity' | 'agents' | 'status'
 
-export function MetricsPanel({ stats: clusterStats, workers, feed }: MetricsPanelProps = {}) {
-  const [isExpanded, setIsExpanded] = useState(true)
+function formatTokens(n: number): string {
+  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`
+  if (n >= 1_000) return `${(n / 1_000).toFixed(1)}K`
+  return String(n)
+}
+
+export function MetricsPanel({ stats: clusterStats, workers, feed, tasks }: MetricsPanelProps = {}) {
+  const [isExpanded, setIsExpanded] = useState(false)
   const [activeChart, setActiveChart] = useState<ChartType>('activity')
 
   if (!clusterStats && (!workers || workers.length === 0)) {
@@ -77,6 +84,12 @@ export function MetricsPanel({ stats: clusterStats, workers, feed }: MetricsPane
     );
   }
 
+  // Total context tokens across all tasks
+  const totalTokens = useMemo(() => {
+    if (!tasks || tasks.length === 0) return 0
+    return tasks.reduce((sum, t) => sum + (Number(t.context?.tokens) || 0), 0)
+  }, [tasks])
+
   // Build stats from real cluster data when available
   const displayStats = useMemo(() => {
     if (!clusterStats) {
@@ -85,6 +98,7 @@ export function MetricsPanel({ stats: clusterStats, workers, feed }: MetricsPane
         { label: 'Completed', value: '--', change: '', positive: true, icon: TrendingUp },
         { label: 'In Queue', value: '--', change: '', positive: true, icon: Clock },
         { label: 'Workers', value: '--', change: '', positive: true, icon: Users },
+        { label: 'Tokens', value: '--', change: '', positive: true, icon: Activity },
       ]
     }
     const t = clusterStats.tasks
@@ -94,22 +108,50 @@ export function MetricsPanel({ stats: clusterStats, workers, feed }: MetricsPane
       { label: 'Completed', value: String(t.completed), change: t.failed > 0 ? `${t.failed} failed` : 'none failed', positive: t.failed === 0, icon: TrendingUp },
       { label: 'Running', value: String(t.running), change: `${t.pending} pending`, positive: true, icon: Clock },
       { label: 'Workers', value: `${w.idle + w.busy}/${w.total}`, change: `${w.busy} busy`, positive: w.offline === 0, icon: Users },
+      { label: 'Tokens', value: formatTokens(totalTokens), change: `${tasks?.length || 0} sessions`, positive: true, icon: Activity },
     ]
-  }, [clusterStats])
+  }, [clusterStats, totalTokens, tasks])
 
-  // Build agent performance from real worker data
+  // Build agent performance from real worker data — per-agent token usage
   const agentPerformance = useMemo(() => {
-    if (!workers || workers.length === 0) return []
-    return workers
-      .filter(w => w.status !== 'offline')
-      .map(w => ({
-        name: w.name,
-        completed: w.tasksCompleted,
-        color: getWorkerColor(w.provider),
+    if (!tasks || tasks.length === 0) {
+      // Fallback to session count from workers
+      if (!workers || workers.length === 0) return []
+      return workers
+        .filter(w => w.status !== 'offline')
+        .map(w => ({
+          name: w.name,
+          tokens: 0,
+          sessions: w.tasksCompleted,
+          color: getWorkerColor(w.provider),
+        }))
+        .sort((a, b) => b.sessions - a.sessions)
+        .slice(0, 8)
+    }
+    // Sum tokens by assignedWorker
+    const byAgent = new Map<string, { tokens: number; sessions: number; provider: string }>()
+    for (const t of tasks) {
+      const agent = t.assignedWorker || 'unassigned'
+      const existing = byAgent.get(agent) || { tokens: 0, sessions: 0, provider: '' }
+      existing.tokens += Number(t.context?.tokens) || 0
+      existing.sessions += 1
+      // Find worker provider for color
+      if (!existing.provider && workers) {
+        const w = workers.find(w => w.id === agent)
+        if (w) existing.provider = w.provider
+      }
+      byAgent.set(agent, existing)
+    }
+    return Array.from(byAgent.entries())
+      .map(([name, data]) => ({
+        name: workers?.find(w => w.id === name)?.name || name,
+        tokens: data.tokens,
+        sessions: data.sessions,
+        color: getWorkerColor(data.provider),
       }))
-      .sort((a, b) => b.completed - a.completed)
+      .sort((a, b) => b.tokens - a.tokens)
       .slice(0, 8)
-  }, [workers])
+  }, [tasks, workers])
 
   // Build status distribution from real stats
   const statusDistribution = useMemo(() => {
@@ -199,7 +241,7 @@ export function MetricsPanel({ stats: clusterStats, workers, feed }: MetricsPane
             transition={{ duration: 0.2 }}
           >
             {/* Stats Row */}
-            <div className="px-3 sm:px-6 pb-4 grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-4">
+            <div className="px-3 sm:px-6 pb-4 grid grid-cols-2 md:grid-cols-5 gap-2 sm:gap-4">
               {displayStats.map((stat, index) => (
                 <motion.div
                   key={stat.label}
@@ -334,7 +376,7 @@ export function MetricsPanel({ stats: clusterStats, workers, feed }: MetricsPane
                               color: 'hsl(var(--foreground))',
                             }}
                           />
-                          <Bar dataKey="completed" fill="var(--green, #46a758)" radius={[0, 4, 4, 0]} name="Completed" />
+                          <Bar dataKey="tokens" fill="var(--purple, #8e4ec6)" radius={[0, 4, 4, 0]} name="Tokens" />
                         </BarChart>
                       </ResponsiveContainer>
                     ) : (

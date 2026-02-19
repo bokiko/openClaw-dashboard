@@ -165,6 +165,7 @@ export interface DashboardData {
   timestamp: number;
   refreshInterval?: number;
   dataSource?: 'gateway' | 'db';
+  spawnedSessions?: SpawnedSession[];
 }
 
 // ── Gateway types (from OpenClaw gateway WS RPC) ────────────────────
@@ -178,6 +179,23 @@ export interface GatewaySession {
   model: string;
   contextTokens: number;
   flags: Record<string, unknown>;
+  label?: string;
+  totalTokens?: number;
+  channel?: string;
+  transcriptPath?: string;
+}
+
+export interface SpawnedSession {
+  sessionId: string;
+  label: string;
+  model: string;
+  freshness: 'recent' | 'stale';
+  contextTokens: number;
+  totalTokens?: number;
+  parentAgentId: string;
+  team?: string;
+  updatedAt: string;
+  key: string;
 }
 
 export interface GatewayCronJob {

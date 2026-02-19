@@ -1,8 +1,10 @@
 'use client';
 
+import { AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
-import type { Agent, Task } from '@/types';
+import type { Agent, Task, SpawnedSession } from '@/types';
 import AgentAvatar from './AgentAvatar';
+import { SpawnedSessionGroup } from './SpawnedSessionRow';
 
 interface AgentStripProps {
   agents: Agent[];
@@ -10,6 +12,7 @@ interface AgentStripProps {
   selectedAgentId: string | null;
   onAgentClick: (id: string) => void;
   onAgentDetail: (id: string) => void;
+  spawnedSessions?: SpawnedSession[];
 }
 
 export default function AgentStrip({
@@ -18,10 +21,22 @@ export default function AgentStrip({
   selectedAgentId,
   onAgentClick,
   onAgentDetail,
+  spawnedSessions = [],
 }: AgentStripProps) {
   const workingAgents = agents.filter(a => a.status === 'working');
   const idleAgents = agents.filter(a => a.status === 'idle');
   const offlineAgents = agents.filter(a => a.status === 'offline');
+
+  // Count spawns per agent
+  const spawnsByAgent = new Map<string, SpawnedSession[]>();
+  for (const s of spawnedSessions) {
+    const list = spawnsByAgent.get(s.parentAgentId) || [];
+    list.push(s);
+    spawnsByAgent.set(s.parentAgentId, list);
+  }
+
+  // Show spawned sessions for the selected agent
+  const selectedSpawns = selectedAgentId ? spawnsByAgent.get(selectedAgentId) || [] : [];
 
   return (
     <div className="relative py-4 border-b border-border/50">
@@ -65,6 +80,7 @@ export default function AgentStrip({
             isSelected={selectedAgentId === agent.id}
             onClick={() => onAgentClick(agent.id)}
             onDoubleClick={() => onAgentDetail(agent.id)}
+            spawnCount={spawnsByAgent.get(agent.id)?.length || 0}
           />
         ))}
 
@@ -82,6 +98,7 @@ export default function AgentStrip({
             isSelected={selectedAgentId === agent.id}
             onClick={() => onAgentClick(agent.id)}
             onDoubleClick={() => onAgentDetail(agent.id)}
+            spawnCount={spawnsByAgent.get(agent.id)?.length || 0}
           />
         ))}
 
@@ -98,9 +115,17 @@ export default function AgentStrip({
             isSelected={selectedAgentId === agent.id}
             onClick={() => onAgentClick(agent.id)}
             onDoubleClick={() => onAgentDetail(agent.id)}
+            spawnCount={spawnsByAgent.get(agent.id)?.length || 0}
           />
         ))}
       </div>
+
+      {/* Spawned sessions for selected agent */}
+      <AnimatePresence>
+        {selectedAgentId && selectedSpawns.length > 0 && (
+          <SpawnedSessionGroup sessions={selectedSpawns} />
+        )}
+      </AnimatePresence>
     </div>
   );
 }
@@ -110,13 +135,15 @@ function AgentButton({
   tasks,
   isSelected,
   onClick,
-  onDoubleClick
+  onDoubleClick,
+  spawnCount = 0,
 }: {
   agent: Agent;
   tasks?: Task[];
   isSelected: boolean;
   onClick: () => void;
   onDoubleClick: () => void;
+  spawnCount?: number;
 }) {
   const isOffline = agent.status === 'offline';
   const agentTasks = tasks?.filter(t => t.assigneeId === agent.id) ?? [];
@@ -171,6 +198,18 @@ function AgentButton({
             : "text-blue-DEFAULT bg-blue-DEFAULT/10"
         )}>
           {agent.badge}
+        </span>
+      )}
+
+      {spawnCount > 0 && (
+        <span
+          className="text-[10px] px-1.5 py-0.5 rounded font-medium"
+          style={{
+            background: 'var(--accent-primary-light)',
+            color: 'var(--accent-primary)',
+          }}
+        >
+          +{spawnCount}
         </span>
       )}
     </button>

@@ -28,7 +28,14 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   const isDark = settings.theme !== 'light';
 
   return (
-    <html lang="en" className={themeClass}>
+    <html lang="en" className={themeClass} suppressHydrationWarning>
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){try{var t=localStorage.getItem('theme');if(t&&(t==='light'||t==='dark')){var h=document.documentElement;h.classList.remove('theme-light','theme-dark');h.classList.add('theme-'+t);}}catch(e){}})();`,
+          }}
+        />
+      </head>
       <body
         className={`${inter.variable} font-sans antialiased bg-background text-foreground`}
         style={{

@@ -13,6 +13,7 @@ import type {
   ClusterWorker,
   Activity,
   DashboardData,
+  SpawnedSession,
   Priority,
 } from '@/types';
 import type { GatewayRoutine } from '@/types';
@@ -252,6 +253,38 @@ function parseCronSchedule(sched: GatewayCronJob['schedule']): GatewayRoutine['s
   };
 }
 
+// ── Subagent helpers ────────────────────────────────────────────────
+
+function isSubagent(key: string): boolean {
+  return key.includes(':subagent:');
+}
+
+function getParentAgentId(key: string): string {
+  return key.split(':')[1] || 'main';
+}
+
+function deriveTeam(label?: string): string | undefined {
+  if (!label || !label.includes('-')) return undefined;
+  return label.split('-')[0];
+}
+
+function sessionToSpawnedSession(s: GatewaySession): SpawnedSession {
+  const age = Date.now() - new Date(s.updatedAt).getTime();
+  const freshness: SpawnedSession['freshness'] = age < 120_000 ? 'recent' : 'stale';
+  return {
+    sessionId: s.sessionId,
+    label: s.label || sessionKeyToTitle(s.key),
+    model: s.model,
+    freshness,
+    contextTokens: s.contextTokens,
+    totalTokens: s.totalTokens,
+    parentAgentId: getParentAgentId(s.key),
+    team: deriveTeam(s.label),
+    updatedAt: s.updatedAt,
+    key: s.key,
+  };
+}
+
 // ── Build DashboardData ─────────────────────────────────────────────
 
 export function buildDashboardData(
@@ -259,17 +292,30 @@ export function buildDashboardData(
   cronRuns: GatewayCronRun[],
   cronJobs: GatewayCronJob[],
 ): DashboardData {
-  // Build tasks from sessions
+  // Partition sessions into main and subagent
+  const mainSessions: GatewaySession[] = [];
+  const subSessions: GatewaySession[] = [];
+  for (const s of sessions) {
+    if (isSubagent(s.key)) {
+      subSessions.push(s);
+    } else {
+      mainSessions.push(s);
+    }
+  }
+
+  // Build tasks from all sessions (subagents appear in MissionQueue too)
   const tasks = sessions.map(sessionToClusterTask);
 
-  // Derive unique agents from sessions
+  // Map subagent sessions to SpawnedSession[]
+  const spawnedSessions = subSessions.map(sessionToSpawnedSession);
+
+  // Derive unique agents from main sessions only (subagents nest under parents)
   const agentMap = new Map<string, AgentInfo>();
-  for (const s of sessions) {
+  for (const s of mainSessions) {
     const agentId = s.agentId?.trim() || deriveAgentIdFromKey(s.key) || 'main';
     const existing = agentMap.get(agentId);
     if (existing) {
       existing.sessions.push(s);
-      // Use the most common model
     } else {
       agentMap.set(agentId, { id: agentId, model: s.model, sessions: [s] });
     }
@@ -324,5 +370,6 @@ export function buildDashboardData(
     },
     timestamp: Date.now(),
     dataSource: 'gateway',
+    spawnedSessions,
   };
 }

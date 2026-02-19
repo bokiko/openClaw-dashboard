@@ -1,9 +1,10 @@
 'use client';
 
 import {
-  Activity, Zap, Command, Github,
+  Activity, Zap, Command, Github, Sun, Moon,
   Brain, Bot, Flame, Shield, Cpu, Rocket, Sparkles, Eye, type LucideIcon,
 } from 'lucide-react';
+import { useTheme } from '@/lib/useTheme';
 import { cn } from '@/lib/utils';
 import NotificationBell from './NotificationBell';
 
@@ -47,6 +48,7 @@ export default function Header({
   logoIcon = 'zap',
 }: HeaderProps) {
   const LogoIcon = LOGO_ICONS[logoIcon] || Zap;
+  const { theme, toggle: toggleTheme } = useTheme();
 
   return (
     <div>
@@ -131,6 +133,19 @@ export default function Header({
               <Github className="w-4 h-4" />
             </a>
           )}
+
+          {/* Theme Toggle */}
+          <button
+            onClick={toggleTheme}
+            className={cn(
+              "w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center transition-all duration-200",
+              "bg-secondary/50 text-muted-foreground border border-border",
+              "hover:border-border/80 hover:text-foreground hover:bg-secondary"
+            )}
+            title={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
+          >
+            {theme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+          </button>
 
           {/* Notification Bell */}
           <NotificationBell

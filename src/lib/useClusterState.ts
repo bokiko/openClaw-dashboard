@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useReducer } from 'react';
-import type { Agent, Task, FeedItem, DashboardData, ClusterTask, ClusterWorker } from '@/types';
+import type { Agent, Task, FeedItem, DashboardData, ClusterTask, ClusterWorker, SpawnedSession } from '@/types';
 import { clusterTaskToTask, clusterWorkerToAgent, activityToFeedItem } from '@/types';
 import type { Notification } from '@/types';
 
@@ -14,6 +14,7 @@ interface ClusterState {
   timestamp: number | null;
   refreshInterval: number;
   dataSource: 'gateway' | 'db' | null;
+  spawnedSessions: SpawnedSession[];
 }
 
 type ClusterAction =
@@ -43,6 +44,7 @@ function clusterReducer(state: ClusterState, action: ClusterAction): ClusterStat
         timestamp: action.payload.timestamp,
         refreshInterval: action.payload.refreshInterval ?? state.refreshInterval,
         dataSource: action.payload.dataSource ?? state.dataSource,
+        spawnedSessions: action.payload.spawnedSessions ?? [],
       };
 
     case 'TASK_CREATED':
@@ -126,6 +128,7 @@ export function useClusterState() {
     timestamp: null,
     refreshInterval: 30000,
     dataSource: null,
+    spawnedSessions: [],
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -246,6 +249,7 @@ export function useClusterState() {
     clusterTasks: state.tasks,
     clusterWorkers: state.workers,
     dataSource: state.dataSource,
+    spawnedSessions: state.spawnedSessions,
     markNotificationRead,
     deleteNotification,
     clearAllNotifications,

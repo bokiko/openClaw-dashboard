@@ -22,6 +22,7 @@ import { TaskCardSkeleton } from '@/components/skeletons/TaskCardSkeleton';
 import { MetricsSkeleton } from '@/components/skeletons/MetricsSkeleton';
 import { toast } from 'sonner';
 import { useClusterState } from '@/lib/useClusterState';
+import { useTheme } from '@/lib/useTheme';
 import type { TaskStatus } from '@/types';
 import { STATUS_CONFIG } from '@/types';
 
@@ -30,8 +31,10 @@ import { STATUS_CONFIG } from '@/types';
 function DashboardContent() {
   const {
     agents, tasks, feed, notifications, stats, loading, error, lastUpdated, connected, refresh,
-    clusterWorkers, dataSource, markNotificationRead, deleteNotification, clearAllNotifications,
+    clusterWorkers, clusterTasks, dataSource, spawnedSessions,
+    markNotificationRead, deleteNotification, clearAllNotifications,
   } = useClusterState();
+  const { toggle: toggleTheme } = useTheme();
 
   /** Task lanes are read-only from gateway — drag-drop shows a toast */
   const handleTaskMove = useCallback((taskId: string, newStatus: TaskStatus) => {
@@ -110,6 +113,9 @@ function DashboardContent() {
       case 'filter-in-progress':
         setStatusFilter('in-progress');
         break;
+      case 'toggle-theme':
+        toggleTheme();
+        break;
       default:
         // Dynamic agent filter: "filter-<agentId>"
         if (action.startsWith('filter-')) {
@@ -119,7 +125,7 @@ function DashboardContent() {
           console.log('Command:', action);
         }
     }
-  }, []);
+  }, [toggleTheme]);
 
   const activeAgents = agents.filter(a => a.status === 'working').length;
   const inProgressTasks = tasks.filter(t => t.status === 'in-progress').length;
@@ -217,7 +223,12 @@ function DashboardContent() {
           selectedAgentId={selectedAgentId}
           onAgentClick={handleAgentClick}
           onAgentDetail={(id) => setAgentDetailId(id)}
+          spawnedSessions={spawnedSessions}
         />
+
+        <ErrorBoundary>
+          <MetricsPanel stats={stats} workers={clusterWorkers} feed={feed} tasks={clusterTasks} />
+        </ErrorBoundary>
 
         <ErrorBoundary>
           <MissionQueue
@@ -242,13 +253,6 @@ function DashboardContent() {
             </ErrorBoundary>
           </div>
         )}
-
-        {/* Metrics Panel */}
-        <div className="mt-8 mb-8">
-          <ErrorBoundary>
-            <MetricsPanel stats={stats} workers={clusterWorkers} feed={feed} />
-          </ErrorBoundary>
-        </div>
 
         {/* Connection + last updated indicator */}
         <div className="fixed bottom-4 right-4 flex items-center gap-2 text-xs text-muted-foreground/50">
