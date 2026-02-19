@@ -12,6 +12,7 @@ interface ClusterState {
   notifications: Notification[];
   stats: DashboardData['stats'] | null;
   timestamp: number | null;
+  refreshInterval: number;
 }
 
 type ClusterAction =
@@ -39,6 +40,7 @@ function clusterReducer(state: ClusterState, action: ClusterAction): ClusterStat
         notifications: state.notifications, // preserved across refresh
         stats: action.payload.stats,
         timestamp: action.payload.timestamp,
+        refreshInterval: action.payload.refreshInterval ?? state.refreshInterval,
       };
 
     case 'TASK_CREATED':
@@ -120,6 +122,7 @@ export function useClusterState() {
     notifications: [],
     stats: null,
     timestamp: null,
+    refreshInterval: 30000,
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -152,6 +155,13 @@ export function useClusterState() {
     fetchData();
     fetchNotifications();
   }, [fetchData, fetchNotifications]);
+
+  // Periodic polling based on settings.refreshInterval
+  useEffect(() => {
+    if (loading) return;
+    const id = setInterval(fetchData, state.refreshInterval);
+    return () => clearInterval(id);
+  }, [loading, state.refreshInterval, fetchData]);
 
   // WebSocket event handler
   const handleWsEvent = useCallback((event: { event: string; data: unknown }) => {
@@ -194,25 +204,23 @@ export function useClusterState() {
   const markNotificationRead = useCallback(async (id: string) => {
     dispatch({ type: 'MARK_NOTIFICATION_READ', id });
     try {
-      await fetch(`/api/cluster/notifications/${id}/read`, { method: 'PATCH' });
+      await fetch(`/api/notifications/${id}`, { method: 'PATCH' });
     } catch { /* optimistic — ignore failures */ }
   }, []);
 
   const deleteNotification = useCallback(async (id: string) => {
     dispatch({ type: 'DELETE_NOTIFICATION', id });
     try {
-      await fetch(`/api/cluster/notifications/${id}`, { method: 'DELETE' });
+      await fetch(`/api/notifications/${id}`, { method: 'DELETE' });
     } catch { /* optimistic */ }
   }, []);
 
   const clearAllNotifications = useCallback(async () => {
-    const ids = state.notifications.map(n => n.id);
     dispatch({ type: 'CLEAR_NOTIFICATIONS' });
-    // Delete each on server (fire-and-forget)
-    for (const id of ids) {
-      fetch(`/api/cluster/notifications/${id}`, { method: 'DELETE' }).catch(() => {});
-    }
-  }, [state.notifications]);
+    try {
+      await fetch('/api/notifications', { method: 'DELETE' });
+    } catch { /* optimistic */ }
+  }, []);
 
   // Convert to dashboard format
   const tasks: Task[] = state.tasks.map(ct => clusterTaskToTask(ct, state.workers));

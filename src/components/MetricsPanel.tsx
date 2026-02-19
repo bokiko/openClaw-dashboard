@@ -26,7 +26,7 @@ import {
   PieChartIcon,
   Activity,
 } from 'lucide-react'
-import type { DashboardData, ClusterWorker } from '@/types'
+import type { DashboardData, ClusterWorker, FeedItem } from '@/types'
 
 // Fallback mock data for charts (used when no real data)
 const mockActivityData = [
@@ -55,11 +55,12 @@ function getWorkerColor(provider: string): string {
 interface MetricsPanelProps {
   stats?: DashboardData['stats'] | null;
   workers?: ClusterWorker[];
+  feed?: FeedItem[];
 }
 
 type ChartType = 'activity' | 'agents' | 'status'
 
-export function MetricsPanel({ stats: clusterStats, workers }: MetricsPanelProps = {}) {
+export function MetricsPanel({ stats: clusterStats, workers, feed }: MetricsPanelProps = {}) {
   const [isExpanded, setIsExpanded] = useState(true)
   const [activeChart, setActiveChart] = useState<ChartType>('activity')
 
@@ -127,8 +128,35 @@ export function MetricsPanel({ stats: clusterStats, workers }: MetricsPanelProps
     ].filter(s => s.value > 0)
   }, [clusterStats])
 
-  // Activity data: still use mock since we don't have time-series in the cluster yet
-  const activityData = mockActivityData
+  // Activity data: aggregate feed items into daily buckets over last 7 days
+  const activityData = useMemo(() => {
+    if (!feed || feed.length === 0) return mockActivityData
+
+    const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+    const now = new Date()
+    const buckets: Record<string, number> = {}
+
+    // Initialize last 7 days
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date(now)
+      d.setDate(d.getDate() - i)
+      const key = d.toISOString().slice(0, 10)
+      buckets[key] = 0
+    }
+
+    // Count feed items per day
+    for (const item of feed) {
+      const key = new Date(item.timestamp).toISOString().slice(0, 10)
+      if (key in buckets) {
+        buckets[key]++
+      }
+    }
+
+    return Object.entries(buckets).map(([dateStr, tasks]) => ({
+      day: dayNames[new Date(dateStr).getUTCDay()],
+      tasks,
+    }))
+  }, [feed])
 
   const chartTabs: { id: ChartType; label: string; icon: React.ReactNode }[] = [
     { id: 'activity', label: 'Activity', icon: <Activity className="w-4 h-4" /> },

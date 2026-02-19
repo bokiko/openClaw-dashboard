@@ -234,7 +234,7 @@ function DashboardContent() {
         {/* Metrics Panel */}
         <div className="mt-8 mb-8">
           <ErrorBoundary>
-            <MetricsPanel stats={stats} workers={clusterWorkers} />
+            <MetricsPanel stats={stats} workers={clusterWorkers} feed={feed} />
           </ErrorBoundary>
         </div>
 

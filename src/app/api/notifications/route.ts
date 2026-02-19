@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { isDbAvailable } from '@/lib/db';
-import { getNotifications, markAllNotificationsRead } from '@/lib/notification-bus';
+import { getNotifications, markAllNotificationsRead, deleteAllNotifications } from '@/lib/notification-bus';
 
 export const dynamic = 'force-dynamic';
 
@@ -40,4 +40,18 @@ export async function PATCH(request: Request) {
   }
 
   return NextResponse.json({ error: 'Unknown action' }, { status: 400 });
+}
+
+export async function DELETE() {
+  if (!isDbAvailable()) {
+    return NextResponse.json({ ok: true, count: 0 });
+  }
+
+  try {
+    const count = await deleteAllNotifications();
+    return NextResponse.json({ ok: true, count });
+  } catch (error) {
+    console.error('Error deleting all notifications:', error);
+    return NextResponse.json({ error: 'Failed to delete notifications' }, { status: 500 });
+  }
 }

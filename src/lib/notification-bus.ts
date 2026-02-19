@@ -105,3 +105,15 @@ export async function markAllNotificationsRead(): Promise<number> {
   const result = await query(`UPDATE notifications SET read = TRUE WHERE read = FALSE`);
   return result.rowCount ?? 0;
 }
+
+export async function deleteNotification(id: number): Promise<boolean> {
+  if (!isDbAvailable()) return false;
+  const result = await query(`DELETE FROM notifications WHERE id = $1`, [id]);
+  return (result.rowCount ?? 0) > 0;
+}
+
+export async function deleteAllNotifications(): Promise<number> {
+  if (!isDbAvailable()) return 0;
+  const result = await query(`DELETE FROM notifications`);
+  return result.rowCount ?? 0;
+}

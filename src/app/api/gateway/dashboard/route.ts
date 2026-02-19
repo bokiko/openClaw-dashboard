@@ -9,6 +9,7 @@
 import { NextResponse } from 'next/server';
 import { getGatewayClient } from '@/lib/gateway-client';
 import { buildDashboardData } from '@/lib/gateway-mappers';
+import { loadSettings } from '@/lib/settings';
 import type { GatewaySession, GatewayCronJob, GatewayCronRun } from '@/types';
 
 let cache: { data: unknown; ts: number } | null = null;
@@ -36,10 +37,14 @@ export async function GET() {
 
     const data = buildDashboardData(sessions, cronRuns, cronJobs);
 
-    // Cache the result
-    cache = { data, ts: Date.now() };
+    // Include refreshInterval from settings
+    const settings = loadSettings();
+    const responseData = { ...data, refreshInterval: settings.refreshInterval };
 
-    return NextResponse.json(data);
+    // Cache the result
+    cache = { data: responseData, ts: Date.now() };
+
+    return NextResponse.json(responseData);
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Gateway error';
     console.error('[gateway/dashboard]', message);

@@ -163,6 +163,7 @@ export interface DashboardData {
     uptime: number;
   };
   timestamp: number;
+  refreshInterval?: number;
 }
 
 // ── Gateway types (from OpenClaw gateway WS RPC) ────────────────────
