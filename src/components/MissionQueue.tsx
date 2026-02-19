@@ -96,16 +96,19 @@ export default function MissionQueue({
   onTaskMove,
 }: MissionQueueProps) {
   const [activeId, setActiveId] = useState<string | null>(null);
+  const dragEnabled = !!onTaskMove;
 
   const sensors = useSensors(
-    useSensor(PointerSensor, {
-      activationConstraint: {
-        distance: 8,
-      },
-    }),
-    useSensor(KeyboardSensor, {
-      coordinateGetter: sortableKeyboardCoordinates,
-    })
+    ...(dragEnabled ? [
+      useSensor(PointerSensor, {
+        activationConstraint: {
+          distance: 8,
+        },
+      }),
+      useSensor(KeyboardSensor, {
+        coordinateGetter: sortableKeyboardCoordinates,
+      }),
+    ] : [])
   );
 
   // Filter by agent

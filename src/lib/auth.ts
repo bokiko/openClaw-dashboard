@@ -1,32 +1,52 @@
 import { SignJWT, jwtVerify } from 'jose';
+import { compareSync } from 'bcryptjs';
 import { isDbAvailable } from '@/lib/db';
 
 const SESSION_DURATION = 24 * 60 * 60; // 24 hours in seconds
 
 function getSecret(): Uint8Array {
-  const secret = process.env.DASHBOARD_SECRET;
-  if (!secret) throw new Error('DASHBOARD_SECRET is not set');
+  // JWT_SECRET takes precedence; fall back to DASHBOARD_SECRET for backwards compat
+  const secret = process.env.JWT_SECRET || process.env.DASHBOARD_SECRET;
+  if (!secret) throw new Error('JWT_SECRET (or DASHBOARD_SECRET) is not set');
   return new TextEncoder().encode(secret);
 }
 
 export function isAuthEnabled(): boolean {
-  return !!process.env.DASHBOARD_SECRET;
+  return !!(process.env.DASHBOARD_PASSWORD || process.env.DASHBOARD_SECRET);
 }
 
+/**
+ * Verify the login password.
+ *
+ * Supports two modes:
+ *  1. DASHBOARD_PASSWORD is a bcrypt hash → use bcrypt compare (recommended).
+ *  2. Legacy fallback: plain DASHBOARD_SECRET constant-time comparison.
+ */
 export function verifyPassword(plain: string): boolean {
+  const hashed = process.env.DASHBOARD_PASSWORD;
+  if (hashed) {
+    // bcrypt hash starts with $2a$ / $2b$ / $2y$
+    if (hashed.startsWith('$2')) {
+      return compareSync(plain, hashed);
+    }
+    // Plain-text DASHBOARD_PASSWORD — constant-time compare
+    return constantTimeEqual(plain, hashed);
+  }
+
+  // Legacy: fall back to DASHBOARD_SECRET as password
   const secret = process.env.DASHBOARD_SECRET;
   if (!secret) return false;
+  return constantTimeEqual(plain, secret);
+}
 
-  // Constant-time comparison
-  if (plain.length !== secret.length) return false;
-
-  const a = new TextEncoder().encode(plain);
-  const b = new TextEncoder().encode(secret);
+function constantTimeEqual(a: string, b: string): boolean {
   if (a.length !== b.length) return false;
-
+  const ab = new TextEncoder().encode(a);
+  const bb = new TextEncoder().encode(b);
+  if (ab.length !== bb.length) return false;
   let diff = 0;
-  for (let i = 0; i < a.length; i++) {
-    diff |= a[i] ^ b[i];
+  for (let i = 0; i < ab.length; i++) {
+    diff |= ab[i] ^ bb[i];
   }
   return diff === 0;
 }

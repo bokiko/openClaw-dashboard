@@ -25,7 +25,6 @@ import { toast } from 'sonner';
 import { useClusterState } from '@/lib/useClusterState';
 import { useTheme } from '@/lib/useTheme';
 import type { TaskStatus } from '@/types';
-import { STATUS_CONFIG } from '@/types';
 
 // ── Page Component ──────────────────────────────────────────────────────
 
@@ -38,15 +37,13 @@ function DashboardContent() {
   const { toggle: toggleTheme } = useTheme();
   const router = useRouter();
 
-  /** Task lanes are read-only from gateway — drag-drop shows a toast */
+  /** Task lanes are read-only from gateway — drag-drop is disabled entirely */
   const handleTaskMove = useCallback((taskId: string, newStatus: TaskStatus) => {
-    const task = tasks.find(t => t.id === taskId);
-    const statusLabel = STATUS_CONFIG[newStatus]?.label || newStatus;
-    toast('Sessions are read-only from gateway', {
-      description: `Cannot move "${task?.title?.slice(0, 40)}" to ${statusLabel}`,
-      duration: 3000,
-    });
-  }, [tasks]);
+    if (dataSource === 'gateway') return; // should not be called — DnD is disabled
+    // TODO: implement local task move via API
+    void taskId;
+    void newStatus;
+  }, [dataSource]);
 
   const [mounted, setMounted] = useState(false);
   const [feedOpen, setFeedOpen] = useState(false);
@@ -247,7 +244,7 @@ function DashboardContent() {
             statusFilter={statusFilter}
             onStatusFilterChange={setStatusFilter}
             onTaskClick={(id) => setTaskDetailId(id)}
-            onTaskMove={handleTaskMove}
+            onTaskMove={dataSource === 'gateway' ? undefined : handleTaskMove}
           />
         </ErrorBoundary>
 
@@ -360,5 +357,9 @@ function DashboardContent() {
 }
 
 export default function Home() {
-  return <DashboardContent />;
+  return (
+    <ErrorBoundary>
+      <DashboardContent />
+    </ErrorBoundary>
+  );
 }

@@ -39,4 +39,23 @@ app.prepare().then(async () => {
   server.listen(port, () => {
     console.log(`> Ready on http://${hostname}:${port}`);
   });
+
+  // Graceful shutdown
+  async function shutdown(signal: string) {
+    console.log(`\n${signal} received — shutting down gracefully…`);
+    server.close();
+    try {
+      const { getWss } = await import('./src/lib/ws-server');
+      const wss = getWss();
+      if (wss) wss.close();
+    } catch { /* ws not loaded */ }
+    try {
+      const db = await import('./src/lib/db');
+      await db.shutdown();
+    } catch { /* db not loaded */ }
+    process.exit(0);
+  }
+
+  process.on('SIGTERM', () => shutdown('SIGTERM'));
+  process.on('SIGINT', () => shutdown('SIGINT'));
 });

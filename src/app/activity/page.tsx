@@ -211,5 +211,9 @@ function ActivityContent() {
 }
 
 export default function ActivityPage() {
-  return <ActivityContent />;
+  return (
+    <ErrorBoundary>
+      <ActivityContent />
+    </ErrorBoundary>
+  );
 }

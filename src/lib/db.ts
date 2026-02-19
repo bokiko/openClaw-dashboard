@@ -12,7 +12,7 @@ export function getPool(): pg.Pool {
     }
     _pool = new Pool({
       connectionString,
-      max: 10,
+      max: 3,
       idleTimeoutMillis: 30_000,
       connectionTimeoutMillis: 5_000,
     });
