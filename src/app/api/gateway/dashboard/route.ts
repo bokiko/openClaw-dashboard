@@ -24,16 +24,20 @@ export async function GET() {
   try {
     const gw = getGatewayClient();
 
-    // Parallel calls to gateway
-    const [sessionsRes, cronJobsRes, cronRunsRes] = await Promise.all([
+    // Parallel calls to gateway — cron methods are non-fatal (not all gateways support them)
+    const [sessionsRes, cronJobsRes, cronRunsRes] = await Promise.allSettled([
       gw.call<{ sessions: GatewaySession[] }>('sessions.list', { limit: 50 }),
       gw.call<{ jobs: GatewayCronJob[] }>('cron.list', {}),
       gw.call<{ runs: GatewayCronRun[] }>('cron.runs', { limit: 50 }),
     ]);
 
-    const sessions = sessionsRes?.sessions || [];
-    const cronJobs = cronJobsRes?.jobs || [];
-    const cronRuns = cronRunsRes?.runs || [];
+    if (sessionsRes.status === 'rejected') {
+      throw sessionsRes.reason;
+    }
+
+    const sessions = sessionsRes.value?.sessions || [];
+    const cronJobs = cronJobsRes.status === 'fulfilled' ? cronJobsRes.value?.jobs || [] : [];
+    const cronRuns = cronRunsRes.status === 'fulfilled' ? cronRunsRes.value?.runs || [] : [];
 
     const data = buildDashboardData(sessions, cronRuns, cronJobs);
 
