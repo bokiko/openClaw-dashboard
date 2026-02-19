@@ -265,12 +265,13 @@ export function buildDashboardData(
   // Derive unique agents from sessions
   const agentMap = new Map<string, AgentInfo>();
   for (const s of sessions) {
-    const existing = agentMap.get(s.agentId);
+    const agentId = s.agentId?.trim() || deriveAgentIdFromKey(s.key) || 'main';
+    const existing = agentMap.get(agentId);
     if (existing) {
       existing.sessions.push(s);
       // Use the most common model
     } else {
-      agentMap.set(s.agentId, { id: s.agentId, model: s.model, sessions: [s] });
+      agentMap.set(agentId, { id: agentId, model: s.model, sessions: [s] });
     }
   }
   const workers = Array.from(agentMap.values()).map(agentToClusterWorker);
