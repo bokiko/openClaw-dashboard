@@ -108,7 +108,7 @@ function DashboardContent() {
 
   const unreadNotifications = notifications.filter(n => !n.read).length;
 
-  const handleCommand = useCallback((action: string) => {
+  const handleCommand = useCallback((action: string, payload?: unknown) => {
     switch (action) {
       case 'new-task':
         setCreateTaskOpen(true);
@@ -143,6 +143,16 @@ function DashboardContent() {
       case 'goto-dashboard':
         // Already on dashboard
         break;
+      case 'open-task': {
+        const p = payload as { taskId?: string } | undefined;
+        if (p?.taskId) setTaskDetailId(p.taskId);
+        break;
+      }
+      case 'open-agent': {
+        const p = payload as { agentId?: string } | undefined;
+        if (p?.agentId) setAgentDetailId(p.agentId);
+        break;
+      }
       default:
         // Dynamic agent filter: "filter-<agentId>"
         if (action.startsWith('filter-')) {
@@ -229,7 +239,7 @@ function DashboardContent() {
   return (
     <div className="min-h-screen">
       {/* Command Palette - Global */}
-      <CommandPalette onAction={handleCommand} />
+      <CommandPalette onAction={handleCommand} tasks={clusterTasks} agents={clusterWorkers} />
       <KeyboardShortcutsDialog open={shortcutsOpen} onOpenChange={setShortcutsOpen} />
 
       <div className="max-w-6xl mx-auto px-2 sm:px-6 lg:px-8">

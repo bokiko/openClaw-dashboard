@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useMemo } from 'react'
 import { Command } from 'cmdk'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
@@ -21,9 +21,12 @@ import {
   FileText,
   BarChart3,
 } from 'lucide-react'
+import type { ClusterTask, ClusterWorker } from '@/types'
 
 interface CommandPaletteProps {
   onAction?: (action: string, payload?: unknown) => void
+  tasks?: ClusterTask[]
+  agents?: ClusterWorker[]
 }
 
 interface CommandItem {
@@ -85,9 +88,25 @@ const GROUPS: CommandGroup[] = [
   },
 ]
 
-export function CommandPalette({ onAction }: CommandPaletteProps) {
+export function CommandPalette({ onAction, tasks = [], agents = [] }: CommandPaletteProps) {
   const [open, setOpen] = useState(false)
   const [search, setSearch] = useState('')
+
+  const filteredTasks = useMemo(() => {
+    if (!search.trim()) return []
+    const q = search.toLowerCase()
+    return tasks
+      .filter(t => t.prompt?.toLowerCase().includes(q) || t.id?.toLowerCase().includes(q))
+      .slice(0, 5)
+  }, [search, tasks])
+
+  const filteredAgents = useMemo(() => {
+    if (!search.trim()) return []
+    const q = search.toLowerCase()
+    return agents
+      .filter(a => a.name?.toLowerCase().includes(q) || a.model?.toLowerCase().includes(q) || a.provider?.toLowerCase().includes(q))
+      .slice(0, 5)
+  }, [search, agents])
 
   // Toggle with Cmd+K
   useEffect(() => {
@@ -106,10 +125,10 @@ export function CommandPalette({ onAction }: CommandPaletteProps) {
   }, [])
 
   const handleSelect = useCallback(
-    (commandId: string) => {
+    (commandId: string, payload?: unknown) => {
       setOpen(false)
       setSearch('')
-      onAction?.(commandId)
+      onAction?.(commandId, payload)
     },
     [onAction]
   )
@@ -165,6 +184,55 @@ export function CommandPalette({ onAction }: CommandPaletteProps) {
                 <Command.Empty className="py-8 text-center text-muted-foreground text-sm">
                   No results found.
                 </Command.Empty>
+
+                {/* Dynamic: Tasks matching search */}
+                {filteredTasks.length > 0 && (
+                  <Command.Group key="tasks-dynamic" heading="Tasks" className="mb-2">
+                    <div className="px-2 py-2 text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                      Tasks
+                    </div>
+                    {filteredTasks.map((task) => {
+                      const label = (task.prompt || task.id).slice(0, 60) + ((task.prompt || '').length > 60 ? '…' : '')
+                      return (
+                        <Command.Item
+                          key={`task-${task.id}`}
+                          value={`task-${task.id}-${label}`}
+                          onSelect={() => handleSelect('open-task', { taskId: task.id })}
+                          className="flex items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer text-foreground/70 hover:bg-muted hover:text-foreground data-[selected=true]:bg-muted data-[selected=true]:text-foreground transition-colors group"
+                        >
+                          <ListTodo className="w-4 h-4 text-muted-foreground group-hover:text-foreground/70 group-data-[selected=true]:text-foreground/70" />
+                          <span className="flex-1 truncate">{label}</span>
+                          <span className="text-xs text-muted-foreground px-1.5 py-0.5 bg-secondary rounded border border-border">
+                            {task.status}
+                          </span>
+                        </Command.Item>
+                      )
+                    })}
+                  </Command.Group>
+                )}
+
+                {/* Dynamic: Agents matching search */}
+                {filteredAgents.length > 0 && (
+                  <Command.Group key="agents-dynamic" heading="Agents" className="mb-2">
+                    <div className="px-2 py-2 text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                      Agents
+                    </div>
+                    {filteredAgents.map((agent) => (
+                      <Command.Item
+                        key={`agent-${agent.id}`}
+                        value={`agent-${agent.id}-${agent.name}`}
+                        onSelect={() => handleSelect('open-agent', { agentId: agent.id })}
+                        className="flex items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer text-foreground/70 hover:bg-muted hover:text-foreground data-[selected=true]:bg-muted data-[selected=true]:text-foreground transition-colors group"
+                      >
+                        <Users className="w-4 h-4 text-muted-foreground group-hover:text-foreground/70 group-data-[selected=true]:text-foreground/70" />
+                        <span className="flex-1">{agent.name}</span>
+                        <span className="text-xs text-muted-foreground px-1.5 py-0.5 bg-secondary rounded border border-border">
+                          {agent.provider}/{agent.model}
+                        </span>
+                      </Command.Item>
+                    ))}
+                  </Command.Group>
+                )}
 
                 {GROUPS.map((group) => (
                   <Command.Group
