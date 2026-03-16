@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   DndContext,
@@ -21,6 +21,7 @@ import {
   useSortable,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
+import { Search, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { Agent, Task, TaskStatus } from '@/types';
 import { STATUS_CONFIG, LANE_ORDER } from '@/types';
@@ -96,7 +97,27 @@ export default function MissionQueue({
   onTaskMove,
 }: MissionQueueProps) {
   const [activeId, setActiveId] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const searchRef = useRef<HTMLInputElement>(null);
   const dragEnabled = !!onTaskMove;
+
+  // Ctrl+F / Cmd+F to focus search
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'f') {
+        const tag = (e.target as HTMLElement)?.tagName;
+        if (tag === 'INPUT' || tag === 'TEXTAREA') return;
+        e.preventDefault();
+        searchRef.current?.focus();
+      }
+      if (e.key === 'Escape' && document.activeElement === searchRef.current) {
+        setSearchQuery('');
+        searchRef.current?.blur();
+      }
+    };
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   const sensors = useSensors(
     ...(dragEnabled ? [
@@ -116,9 +137,22 @@ export default function MissionQueue({
     ? tasks.filter(t => t.assigneeId === selectedAgentId)
     : tasks;
 
+  // Filter by search query
+  const searchFiltered = searchQuery.trim()
+    ? agentFiltered.filter(t => {
+        const q = searchQuery.toLowerCase();
+        return (
+          t.title.toLowerCase().includes(q) ||
+          t.description?.toLowerCase().includes(q) ||
+          t.tags.some(tag => tag.toLowerCase().includes(q)) ||
+          t.id.toLowerCase().includes(q)
+        );
+      })
+    : agentFiltered;
+
   // Group tasks by status
   const grouped = LANE_ORDER.reduce<Record<string, Task[]>>((acc, status) => {
-    const statusTasks = agentFiltered
+    const statusTasks = searchFiltered
       .filter(t => t.status === status)
       .sort((a, b) => {
         return b.createdAt - a.createdAt;
@@ -177,12 +211,50 @@ export default function MissionQueue({
 
   return (
     <div className="flex-1 pt-6 pb-16">
+      {/* Search bar */}
+      <div className="flex justify-center mb-4 px-2 sm:px-4">
+        <div className="relative w-full max-w-sm">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground/60 pointer-events-none" />
+          <input
+            ref={searchRef}
+            type="text"
+            value={searchQuery}
+            onChange={e => setSearchQuery(e.target.value)}
+            placeholder="Search tasks… (⌘F)"
+            className={cn(
+              "w-full pl-9 pr-8 py-2 text-sm rounded-xl",
+              "bg-secondary/40 border border-border/50",
+              "text-foreground placeholder:text-muted-foreground/50",
+              "focus:outline-none focus:ring-1 focus:ring-border focus:border-border",
+              "transition-all duration-200",
+              searchQuery && "bg-secondary/70 border-border/80"
+            )}
+          />
+          {searchQuery && (
+            <button
+              onClick={() => { setSearchQuery(''); searchRef.current?.focus(); }}
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 w-5 h-5 rounded-full flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
+            >
+              <X className="w-3 h-3" />
+            </button>
+          )}
+        </div>
+      </div>
+      {/* Search results indicator */}
+      {searchQuery.trim() && (
+        <p className="text-center text-xs text-muted-foreground mb-3">
+          {searchFiltered.length === 0
+            ? 'No tasks match your search'
+            : `${searchFiltered.length} task${searchFiltered.length !== 1 ? 's' : ''} found`}
+        </p>
+      )}
+
       {/* Filter tabs */}
       <div className="flex flex-wrap items-center justify-center gap-1.5 mb-6 sm:mb-8 px-2 sm:px-4">
         {filters.map(f => {
           const count = f.id === 'all'
-            ? agentFiltered.length
-            : agentFiltered.filter(t => t.status === f.id).length;
+            ? searchFiltered.length
+            : searchFiltered.filter(t => t.status === f.id).length;
           
           if (f.id !== 'all' && count === 0) return null;
           
