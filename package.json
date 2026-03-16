@@ -15,6 +15,7 @@
     "log-usage": "npx tsx scripts/log-usage.ts",
     "dispatch": "bash scripts/dispatch-task.sh",
     "export": "npx tsx scripts/export-bundle.ts",
+    "bundle:export": "npx tsx scripts/export-bundle.ts",
     "report": "npx tsx scripts/executive-report.ts",
     "test": "vitest run",
     "test:watch": "vitest"

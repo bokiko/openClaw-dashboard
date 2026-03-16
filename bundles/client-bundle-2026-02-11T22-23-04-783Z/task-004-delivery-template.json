@@ -1,0 +1,81 @@
+{
+  "id": "task-004-delivery-template",
+  "title": "Conservative advisory memo template (EN baseline)",
+  "description": "Create master Word structure: cover, executive summary, legal framing, findings, risks, recommendations, citations and disclaimer section.",
+  "status": "in-progress",
+  "priority": "normal",
+  "claimed_by": "scribe",
+  "tags": [
+    "Template",
+    "Delivery",
+    "Word",
+    "Advisory"
+  ],
+  "created_at": "2026-02-11T15:26:00Z",
+  "updated_at": "2026-02-11T19:28:27Z",
+  "progress": {
+    "percent": 70,
+    "checkpoint": "Bundle template aligned; final formatting underway"
+  },
+  "milestones": [
+    {
+      "key": "started",
+      "label": "Started",
+      "state": "done",
+      "timestamp": 1770823560000
+    },
+    {
+      "key": "draft",
+      "label": "Draft v1",
+      "state": "done",
+      "timestamp": 1770838107000
+    },
+    {
+      "key": "qa",
+      "label": "QA Review",
+      "state": "pending"
+    },
+    {
+      "key": "final",
+      "label": "Final Delivery",
+      "state": "pending"
+    }
+  ],
+  "gates": [
+    {
+      "key": "draft_ready",
+      "label": "Draft Ready",
+      "passed": true,
+      "timestamp": 1770848581980
+    },
+    {
+      "key": "compliance_passed",
+      "label": "Compliance Passed",
+      "passed": false
+    },
+    {
+      "key": "client_approved",
+      "label": "Client Approved",
+      "passed": false
+    },
+    {
+      "key": "delivered",
+      "label": "Delivered",
+      "passed": false
+    }
+  ],
+  "citations_count": 0,
+  "assumptions_count": 0,
+  "source_tier": "unknown",
+  "status_since": 1770838107000,
+  "_last_status": "in-progress",
+  "sla_hours": 48,
+  "stalled": false,
+  "evidence": {
+    "score": 40,
+    "citations_count": 0,
+    "assumptions_count": 0,
+    "source_tier": "unknown"
+  },
+  "sla_ratio": 0.06058693287037037
+}

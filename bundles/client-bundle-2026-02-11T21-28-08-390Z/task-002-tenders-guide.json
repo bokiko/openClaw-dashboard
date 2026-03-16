@@ -1,0 +1,93 @@
+{
+  "id": "task-002-tenders-guide",
+  "title": "Final guide — Kuwait Public Tenders Entry",
+  "description": "Execution-grade final guide in progress (merged pack section B).",
+  "status": "review",
+  "priority": "high",
+  "claimed_by": "munaqasat",
+  "tags": [
+    "Tenders",
+    "Kuwait",
+    "Final",
+    "Guide"
+  ],
+  "created_at": "2026-02-11T15:24:00Z",
+  "updated_at": "2026-02-11T19:28:27Z",
+  "progress": {
+    "percent": 90,
+    "checkpoint": "Draft v1 guide complete + annex mapped; awaiting final client packaging",
+    "last_activity": "Aligned section with merged final pack format"
+  },
+  "usage": [
+    {
+      "inputTokens": 102000,
+      "outputTokens": 5900,
+      "model": "openai-codex/gpt-5.3-codex",
+      "provider": "openai-codex",
+      "timestamp": 1770823935787
+    }
+  ],
+  "milestones": [
+    {
+      "key": "started",
+      "label": "Started",
+      "state": "done",
+      "timestamp": 1770823440000
+    },
+    {
+      "key": "draft",
+      "label": "Draft v1",
+      "state": "done",
+      "timestamp": 1770838107000
+    },
+    {
+      "key": "qa",
+      "label": "QA Review",
+      "state": "active",
+      "timestamp": 1770838107000
+    },
+    {
+      "key": "final",
+      "label": "Final Delivery",
+      "state": "pending"
+    }
+  ],
+  "gates": [
+    {
+      "key": "draft_ready",
+      "label": "Draft Ready",
+      "passed": true,
+      "timestamp": 1770845287671
+    },
+    {
+      "key": "compliance_passed",
+      "label": "Compliance Passed",
+      "passed": true,
+      "timestamp": 1770845287671
+    },
+    {
+      "key": "client_approved",
+      "label": "Client Approved",
+      "passed": false
+    },
+    {
+      "key": "delivered",
+      "label": "Delivered",
+      "passed": false
+    }
+  ],
+  "citations_count": 10,
+  "assumptions_count": 3,
+  "source_tier": "mixed",
+  "status_since": 1770838107000,
+  "_last_status": "review",
+  "sla_hours": 12,
+  "stalled": false,
+  "evidence": {
+    "score": 84,
+    "citations_count": 10,
+    "assumptions_count": 3,
+    "source_tier": "mixed"
+  },
+  "sla_ratio": 0.1662192361111111
+}

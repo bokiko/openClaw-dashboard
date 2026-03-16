@@ -1,0 +1,80 @@
+{
+  "id": "task-002-tenders-guide",
+  "title": "Kuwait Public Tenders Entry Guide — v0.2 (Source-Backed)",
+  "description": "Revised with actual CAPT law citations. Zero assumptions remaining. Verified fees (KWD 100), actual document lists, authentication requirements from official sources.",
+  "status": "review",
+  "priority": "high",
+  "claimed_by": "munaqasat",
+  "tags": [
+    "Tenders",
+    "Kuwait",
+    "Procurement",
+    "Guide",
+    "v0.2"
+  ],
+  "created_at": "2026-02-11T15:24:00Z",
+  "updated_at": "2026-02-12T11:07:00Z",
+  "progress": {
+    "percent": 95,
+    "checkpoint": "v0.2 delivered — source-backed, zero assumptions. Awaiting client review.",
+    "last_activity": "Uploaded to Google Drive + local file"
+  },
+  "milestones": [
+    {
+      "key": "started",
+      "label": "Started",
+      "state": "done",
+      "timestamp": 1770823440000
+    },
+    {
+      "key": "draft",
+      "label": "Draft v1",
+      "state": "done",
+      "timestamp": 1770894420000
+    },
+    {
+      "key": "qa",
+      "label": "QA Review",
+      "state": "active",
+      "timestamp": 1770894420000
+    },
+    {
+      "key": "final",
+      "label": "Final Delivery",
+      "state": "pending"
+    }
+  ],
+  "gates": [
+    {
+      "key": "draft_ready",
+      "label": "Draft Ready",
+      "passed": true,
+      "timestamp": 1771023588926
+    },
+    {
+      "key": "compliance_passed",
+      "label": "Compliance Passed",
+      "passed": true,
+      "timestamp": 1771023588926
+    },
+    {
+      "key": "client_approved",
+      "label": "Client Approved",
+      "passed": false
+    },
+    {
+      "key": "delivered",
+      "label": "Delivered",
+      "passed": false
+    }
+  ],
+  "evidence": {
+    "score": 92,
+    "citations_count": 7,
+    "assumptions_count": 0,
+    "source_tier": "official"
+  },
+  "status_since": 1770894420000,
+  "sla_hours": 2,
+  "stalled": false
+}

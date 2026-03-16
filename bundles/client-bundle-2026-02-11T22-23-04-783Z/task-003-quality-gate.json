@@ -1,0 +1,84 @@
+{
+  "id": "task-003-quality-gate",
+  "title": "Final QA gate — evidence, assumptions, consistency",
+  "description": "Cross-document quality control before one-file final delivery.",
+  "status": "review",
+  "priority": "high",
+  "claimed_by": "veritas",
+  "tags": [
+    "QA",
+    "Evidence",
+    "Assumptions",
+    "Final"
+  ],
+  "created_at": "2026-02-11T15:25:00Z",
+  "updated_at": "2026-02-11T19:28:27Z",
+  "progress": {
+    "percent": 85,
+    "checkpoint": "Final QA gate pass in progress across both memos and annexes",
+    "last_activity": "Unified style and verification language across sections"
+  },
+  "milestones": [
+    {
+      "key": "started",
+      "label": "Started",
+      "state": "done",
+      "timestamp": 1770823500000
+    },
+    {
+      "key": "draft",
+      "label": "Draft v1",
+      "state": "done",
+      "timestamp": 1770838107000
+    },
+    {
+      "key": "qa",
+      "label": "QA Review",
+      "state": "active",
+      "timestamp": 1770838107000
+    },
+    {
+      "key": "final",
+      "label": "Final Delivery",
+      "state": "pending"
+    }
+  ],
+  "gates": [
+    {
+      "key": "draft_ready",
+      "label": "Draft Ready",
+      "passed": true,
+      "timestamp": 1770848581980
+    },
+    {
+      "key": "compliance_passed",
+      "label": "Compliance Passed",
+      "passed": true,
+      "timestamp": 1770848581980
+    },
+    {
+      "key": "client_approved",
+      "label": "Client Approved",
+      "passed": false
+    },
+    {
+      "key": "delivered",
+      "label": "Delivered",
+      "passed": false
+    }
+  ],
+  "citations_count": 4,
+  "assumptions_count": 1,
+  "source_tier": "official",
+  "status_since": 1770838107000,
+  "_last_status": "review",
+  "sla_hours": 12,
+  "stalled": false,
+  "evidence": {
+    "score": 74,
+    "citations_count": 4,
+    "assumptions_count": 1,
+    "source_tier": "official"
+  },
+  "sla_ratio": 0.24234773148148148
+}

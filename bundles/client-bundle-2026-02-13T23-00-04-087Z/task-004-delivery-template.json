@@ -1,0 +1,76 @@
+{
+  "id": "task-004-delivery-template",
+  "title": "Advisory Memo Template (EN Baseline)",
+  "description": "Master document template for final PDF/Word formatting. Will be applied after drafts are approved. Lower priority until content is ready.",
+  "status": "waiting",
+  "priority": "normal",
+  "claimed_by": "scribe",
+  "tags": [
+    "Template",
+    "Formatting",
+    "Blocked"
+  ],
+  "created_at": "2026-02-11T15:26:00Z",
+  "updated_at": "2026-02-12T09:20:00Z",
+  "progress": {
+    "percent": 0,
+    "checkpoint": "Blocked until drafts finalized and approved for formatting",
+    "last_activity": "Reset — will activate after content review cycle"
+  },
+  "milestones": [
+    {
+      "key": "started",
+      "label": "Started",
+      "state": "pending",
+      "timestamp": 1770823560000
+    },
+    {
+      "key": "draft",
+      "label": "Draft v1",
+      "state": "pending"
+    },
+    {
+      "key": "qa",
+      "label": "QA Review",
+      "state": "pending"
+    },
+    {
+      "key": "final",
+      "label": "Final Delivery",
+      "state": "pending"
+    }
+  ],
+  "gates": [
+    {
+      "key": "draft_ready",
+      "label": "Draft Ready",
+      "passed": false
+    },
+    {
+      "key": "compliance_passed",
+      "label": "Compliance Passed",
+      "passed": false
+    },
+    {
+      "key": "client_approved",
+      "label": "Client Approved",
+      "passed": false
+    },
+    {
+      "key": "delivered",
+      "label": "Delivered",
+      "passed": false
+    }
+  ],
+  "evidence": {
+    "score": 40,
+    "citations_count": 0,
+    "assumptions_count": 0,
+    "source_tier": "unknown"
+  },
+  "status_since": 1770888000000,
+  "sla_hours": 24,
+  "stalled": false,
+  "_last_status": "waiting",
+  "sla_ratio": 0.003958159722222222
+}
