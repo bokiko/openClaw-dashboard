@@ -12,6 +12,7 @@ import TaskEditModal from '@/components/TaskEditModal';
 import TaskCreateModal from '@/components/TaskCreateModal';
 import AgentModal from '@/components/AgentModal';
 import { MetricsPanel } from '@/components/MetricsPanel';
+import { CronJobsPanel } from '@/components/CronJobsPanel';
 import RoutineManager from '@/components/RoutineManager';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { CommandPalette } from '@/components/CommandPalette';
@@ -32,7 +33,7 @@ import type { TaskStatus } from '@/types';
 function DashboardContent() {
   const {
     agents, tasks, feed, notifications, stats, loading, error, lastUpdated, connected, refresh,
-    clusterWorkers, clusterTasks, dataSource, spawnedSessions,
+    clusterWorkers, clusterTasks, dataSource, spawnedSessions, cronJobs,
     markNotificationRead, deleteNotification, clearAllNotifications,
   } = useClusterState();
   const { toggle: toggleTheme } = useTheme();
@@ -58,6 +59,7 @@ function DashboardContent() {
   const [chatAgentId, setChatAgentId] = useState<string | null>(null);
   const [routinesOpen, setRoutinesOpen] = useState(false);
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
+  const [paletteOpen, setPaletteOpen] = useState(false);
 
   useEffect(() => { setMounted(true); }, []);
 
@@ -84,10 +86,10 @@ function DashboardContent() {
         setFeedOpen(false);
         setNotificationsOpen(false);
       }
-      // Cmd/Ctrl + K for command palette (future)
+      // Cmd/Ctrl + K for command palette
       if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
         e.preventDefault();
-        // TODO: Open command palette
+        setPaletteOpen(prev => !prev);
       }
     }
     window.addEventListener('keydown', onKeyDown);
@@ -239,7 +241,7 @@ function DashboardContent() {
   return (
     <div className="min-h-screen">
       {/* Command Palette - Global */}
-      <CommandPalette onAction={handleCommand} tasks={clusterTasks} agents={clusterWorkers} />
+      <CommandPalette onAction={handleCommand} tasks={clusterTasks} agents={clusterWorkers} open={paletteOpen} onOpenChange={setPaletteOpen} />
       <KeyboardShortcutsDialog open={shortcutsOpen} onOpenChange={setShortcutsOpen} />
 
       <div className="max-w-6xl mx-auto px-2 sm:px-6 lg:px-8">
@@ -250,6 +252,7 @@ function DashboardContent() {
           inProgressTasks={inProgressTasks}
           feedOpen={feedOpen}
           onFeedToggle={handleFeedToggle}
+          onCommandPalette={() => setPaletteOpen(true)}
           unreadNotifications={unreadNotifications}
           notificationsOpen={notificationsOpen}
           onNotificationsToggle={handleNotificationsToggle}
@@ -267,6 +270,10 @@ function DashboardContent() {
 
         <ErrorBoundary>
           <MetricsPanel stats={stats} workers={clusterWorkers} feed={feed} tasks={clusterTasks} />
+        </ErrorBoundary>
+
+        <ErrorBoundary>
+          <CronJobsPanel cronJobs={cronJobs} agents={agents} dataSource={dataSource} />
         </ErrorBoundary>
 
         <ErrorBoundary>
