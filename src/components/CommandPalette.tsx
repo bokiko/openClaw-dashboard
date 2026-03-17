@@ -27,6 +27,8 @@ interface CommandPaletteProps {
   onAction?: (action: string, payload?: unknown) => void
   tasks?: ClusterTask[]
   agents?: ClusterWorker[]
+  open?: boolean
+  onOpenChange?: (open: boolean) => void
 }
 
 interface CommandItem {
@@ -88,8 +90,14 @@ const GROUPS: CommandGroup[] = [
   },
 ]
 
-export function CommandPalette({ onAction, tasks = [], agents = [] }: CommandPaletteProps) {
-  const [open, setOpen] = useState(false)
+export function CommandPalette({ onAction, tasks = [], agents = [], open: controlledOpen, onOpenChange }: CommandPaletteProps) {
+  const [internalOpen, setInternalOpen] = useState(false)
+  const open = controlledOpen ?? internalOpen
+  const setOpen = useCallback((value: boolean | ((prev: boolean) => boolean)) => {
+    const next = typeof value === 'function' ? value(open) : value
+    setInternalOpen(next)
+    onOpenChange?.(next)
+  }, [open, onOpenChange])
   const [search, setSearch] = useState('')
 
   const filteredTasks = useMemo(() => {
@@ -107,6 +115,13 @@ export function CommandPalette({ onAction, tasks = [], agents = [] }: CommandPal
       .filter(a => a.name?.toLowerCase().includes(q) || a.model?.toLowerCase().includes(q) || a.provider?.toLowerCase().includes(q))
       .slice(0, 5)
   }, [search, agents])
+
+  // Sync controlled open prop into internal state
+  useEffect(() => {
+    if (controlledOpen !== undefined) {
+      setInternalOpen(controlledOpen)
+    }
+  }, [controlledOpen])
 
   // Toggle with Cmd+K
   useEffect(() => {
