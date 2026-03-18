@@ -5,7 +5,6 @@
 project:
   name: openClaw-dashboard
   type: node
-
 preferences:
   mode: deep
   budget: 2.50
@@ -13,6 +12,6 @@ preferences:
   diff_limit: 2000
   trust: guardian
   on_build_fail: report
-
+  model: opus
 focus:
   priorities: ["auto"]
