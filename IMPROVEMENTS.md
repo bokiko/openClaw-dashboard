@@ -1,3 +1,15 @@
+## 2026-03-18 — Accessibility: ARIA labels, keyboard nav, screen reader support
+
+Added meaningful accessibility attributes across 5 core interactive components.
+TaskCard: role=article, aria-label, tabIndex, keyboard (Enter/Space) activation.
+NotificationPanel: aria-live=polite, role=list/listitem, icon button aria-labels.
+MissionQueue: search input aria-label, filter row role=tablist/tab with aria-selected.
+Header: aria-current=page on active nav, aria-label on icon-only buttons.
+AgentAvatar: aria-label with agent name + status for screen readers.
+No visual changes, no new dependencies.
+**Files changed:** TaskCard.tsx, NotificationPanel.tsx, MissionQueue.tsx, Header.tsx, AgentAvatar.tsx
+**Lines:** +33 / -8
+
 ## 2026-03-18 — Testing: Unit tests for utils and activity-mappers
 
 Added comprehensive unit test suites for two previously untested modules.
