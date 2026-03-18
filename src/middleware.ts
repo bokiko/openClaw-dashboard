@@ -5,7 +5,8 @@ import { jwtVerify } from 'jose';
 const PUBLIC_PATHS = ['/login', '/_next', '/favicon.ico', '/api/health', '/api/auth'];
 
 function getSecret(): Uint8Array | null {
-  const secret = process.env.DASHBOARD_SECRET;
+  // Mirror auth.ts: JWT_SECRET takes precedence, fall back to DASHBOARD_SECRET
+  const secret = process.env.JWT_SECRET || process.env.DASHBOARD_SECRET;
   if (!secret) return null;
   return new TextEncoder().encode(secret);
 }
@@ -13,7 +14,7 @@ function getSecret(): Uint8Array | null {
 export async function middleware(request: NextRequest) {
   const secret = getSecret();
 
-  // No DASHBOARD_SECRET → open access (v1 compatibility)
+  // No secret configured → open access (v1 compatibility)
   if (!secret) return NextResponse.next();
 
   const { pathname } = request.nextUrl;

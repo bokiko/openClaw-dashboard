@@ -40,13 +40,12 @@ export function verifyPassword(plain: string): boolean {
 }
 
 function constantTimeEqual(a: string, b: string): boolean {
-  if (a.length !== b.length) return false;
   const ab = new TextEncoder().encode(a);
   const bb = new TextEncoder().encode(b);
-  if (ab.length !== bb.length) return false;
-  let diff = 0;
-  for (let i = 0; i < ab.length; i++) {
-    diff |= ab[i] ^ bb[i];
+  const len = Math.max(ab.length, bb.length);
+  let diff = ab.length ^ bb.length; // non-zero if lengths differ
+  for (let i = 0; i < len; i++) {
+    diff |= (ab[i] ?? 0) ^ (bb[i] ?? 0);
   }
   return diff === 0;
 }
