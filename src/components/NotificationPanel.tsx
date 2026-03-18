@@ -64,29 +64,33 @@ export default function NotificationPanel({
               onClick={onMarkAllRead}
               className="p-1.5 hover:bg-muted rounded-lg transition-colors"
               title="Mark all read"
+              aria-label="Mark all notifications as read"
             >
               <CheckCheck className="w-4 h-4 text-muted-foreground" />
             </button>
           )}
-          <button onClick={onClose} className="p-1.5 hover:bg-muted rounded-lg transition-colors">
+          <button onClick={onClose} className="p-1.5 hover:bg-muted rounded-lg transition-colors" aria-label="Close notifications">
             <X className="w-4 h-4 text-muted-foreground" />
           </button>
         </div>
       </div>
 
       {/* List */}
-      <div className="flex-1 overflow-y-auto">
+      <div className="flex-1 overflow-y-auto" aria-live="polite">
         {notifications.length === 0 ? (
           <div className="flex items-center justify-center py-12 text-muted-foreground text-sm">
             No notifications
           </div>
         ) : (
-          notifications.map(n => {
+          <div role="list">
+          {notifications.map(n => {
             const Icon = SEVERITY_ICONS[n.severity] || Info;
             return (
               <button
+                role="listitem"
                 key={n.id}
                 onClick={() => onMarkRead(n.id)}
+                aria-label={`${n.severity} notification: ${n.title}${n.read ? '' : ' (unread)'}`}
                 className={`w-full flex items-start gap-3 px-4 py-3 text-left hover:bg-muted/50 transition-colors
                            border-b border-border/50 last:border-b-0
                            ${!n.read ? 'bg-[var(--accent-primary-light)]' : ''}`}
@@ -106,7 +110,8 @@ export default function NotificationPanel({
                 )}
               </button>
             );
-          })
+          })}
+          </div>
         )}
       </div>
     </motion.div>

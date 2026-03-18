@@ -32,12 +32,21 @@ export default function TaskCard({ task, agents, onClick, compact = false, isDra
 
   return (
     <motion.div
+      role="article"
+      aria-label={`${task.title} — ${task.status}`}
+      tabIndex={0}
       onClick={onClick}
+      onKeyDown={(e: React.KeyboardEvent) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          onClick();
+        }
+      }}
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -10 }}
-      whileHover={{ 
-        y: -4, 
+      whileHover={{
+        y: -4,
         boxShadow: '0 12px 32px rgba(0,0,0,0.5), 0 0 0 1px var(--surface-card-hover-border)'
       }}
       transition={{ duration: 0.2, ease: 'easeOut' }}

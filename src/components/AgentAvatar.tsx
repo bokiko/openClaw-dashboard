@@ -49,13 +49,14 @@ export default function AgentAvatar({
   const isOffline = agent.status === 'offline';
 
   return (
-    <div 
+    <div
       className={cn(
         "flex items-center gap-2",
         interactive && "cursor-pointer",
         className
       )}
       onClick={onClick}
+      aria-label={`${agent.name} — ${agent.status}`}
     >
       <div className="relative">
         {/* Glow effect for working agents */}
