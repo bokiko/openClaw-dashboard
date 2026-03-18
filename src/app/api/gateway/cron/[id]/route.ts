@@ -9,11 +9,21 @@ import { getGatewayClient } from '@/lib/gateway-client';
 import type { GatewayCronJob } from '@/types';
 
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  try {
-    const { id } = await params;
-    const body = await req.json();
-    const gw = getGatewayClient();
+  const { id } = await params;
 
+  let body: { enabled?: unknown };
+  try {
+    body = await req.json();
+  } catch {
+    return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 });
+  }
+
+  if (typeof body.enabled !== 'boolean') {
+    return NextResponse.json({ error: 'enabled must be a boolean' }, { status: 400 });
+  }
+
+  try {
+    const gw = getGatewayClient();
     const res = await gw.call<{ job: GatewayCronJob }>('cron.update', {
       id,
       enabled: body.enabled,

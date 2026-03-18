@@ -41,6 +41,12 @@ export async function PATCH(
     return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 });
   }
 
+  const updateableFields: (keyof UpdateTaskInput)[] = ['title', 'description', 'status', 'priority', 'assigneeId', 'tags', 'parentId', 'sortOrder'];
+  const hasUpdates = updateableFields.some(k => body[k] !== undefined);
+  if (!hasUpdates) {
+    return NextResponse.json({ error: 'No fields to update' }, { status: 422 });
+  }
+
   try {
     // Capture old status for move events
     let oldStatus: string | undefined;
