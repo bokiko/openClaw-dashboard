@@ -2,24 +2,15 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
+import dynamic from 'next/dynamic';
 import { AnimatePresence } from 'framer-motion';
 import Header from '@/components/Header';
 import AgentStrip from '@/components/AgentStrip';
 import MissionQueue from '@/components/MissionQueue';
-import LiveFeed from '@/components/LiveFeed';
-import NotificationPanel from '@/components/NotificationPanel';
-import TaskEditModal from '@/components/TaskEditModal';
-import TaskCreateModal from '@/components/TaskCreateModal';
-import AgentModal from '@/components/AgentModal';
 import { MetricsPanel } from '@/components/MetricsPanel';
 import { CronJobsPanel } from '@/components/CronJobsPanel';
-import RoutineManager from '@/components/RoutineManager';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
-import { CommandPalette } from '@/components/CommandPalette';
-import { KeyboardShortcutsDialog } from '@/components/KeyboardShortcutsDialog';
 import WelcomeScreen from '@/components/WelcomeScreen';
-import NotificationBell from '@/components/NotificationBell';
-import ChatPanel from '@/components/ChatPanel';
 import { AgentStripSkeleton } from '@/components/skeletons/AgentStripSkeleton';
 import { TaskCardSkeleton } from '@/components/skeletons/TaskCardSkeleton';
 import { MetricsSkeleton } from '@/components/skeletons/MetricsSkeleton';
@@ -27,6 +18,26 @@ import { toast } from 'sonner';
 import { useClusterState } from '@/lib/useClusterState';
 import { useTheme } from '@/lib/useTheme';
 import type { TaskStatus } from '@/types';
+
+// ── Lazy-loaded overlays (not needed for initial paint) ─────────────────
+// These components are only rendered on user interaction, so we defer their
+// JS download until the browser is idle after the main dashboard is ready.
+
+const LiveFeed = dynamic(() => import('@/components/LiveFeed'), { ssr: false });
+const NotificationPanel = dynamic(() => import('@/components/NotificationPanel'), { ssr: false });
+const TaskEditModal = dynamic(() => import('@/components/TaskEditModal'), { ssr: false });
+const TaskCreateModal = dynamic(() => import('@/components/TaskCreateModal'), { ssr: false });
+const AgentModal = dynamic(() => import('@/components/AgentModal'), { ssr: false });
+const RoutineManager = dynamic(() => import('@/components/RoutineManager'), { ssr: false });
+const CommandPalette = dynamic(
+  () => import('@/components/CommandPalette').then(m => ({ default: m.CommandPalette })),
+  { ssr: false }
+);
+const KeyboardShortcutsDialog = dynamic(
+  () => import('@/components/KeyboardShortcutsDialog').then(m => ({ default: m.KeyboardShortcutsDialog })),
+  { ssr: false }
+);
+const ChatPanel = dynamic(() => import('@/components/ChatPanel'), { ssr: false });
 
 // ── Page Component ──────────────────────────────────────────────────────
 
