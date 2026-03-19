@@ -34,3 +34,12 @@ buttons have proper aria-label attributes.
 **Files changed:** src/components/TaskCard.tsx, Header.tsx, MissionQueue.tsx,
 NotificationBell.tsx, KeyboardShortcutsDialog.tsx, src/lib/utils.ts
 **Lines:** +44 / -11
+
+## 2026-03-19 — Code Quality: Deduplicate timeAgo and formatTokens across components
+
+Six local copies of timeAgo() and formatTokens() existed across five components,
+each with slightly different implementations. Removed all duplicates and imported
+from the single canonical source in src/lib/utils.ts. Future changes to formatting
+logic now propagate automatically to all consumers.
+**Files changed:** MetricsPanel.tsx, RoutineManager.tsx, NotificationPanel.tsx, SpawnedSessionRow.tsx, CronJobsPanel.tsx, ChannelMonitor.tsx
+**Lines:** +10 / -49
