@@ -51,3 +51,20 @@ as they render on every page load.
 
 **Files changed:** src/app/page.tsx
 **Lines:** +21 / -10
+
+## 2026-03-19 — UI/UX: Filter tabs and per-notification delete in NotificationPanel
+
+The notification panel had no way to delete individual notifications and no
+filter controls. The DELETE /api/notifications/:id endpoint existed since day one
+but was never wired to the UI. Users could only mark all read — not dismiss
+individual items or focus on unread ones.
+
+Added All / Unread filter tabs with an animated unread badge, per-notification
+delete button (trash icon, reveal-on-hover), animated list exits via
+AnimatePresence, and a "Show all" recovery link in the empty-unread state.
+Row restructured to two separate click areas (mark-read body + delete button)
+so the nested-button anti-pattern is avoided. All existing ARIA attributes
+preserved.
+
+**Files changed:** src/components/NotificationPanel.tsx, src/app/page.tsx
+**Lines:** +102 / -35
