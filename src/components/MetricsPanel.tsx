@@ -27,6 +27,7 @@ import {
   Activity,
 } from 'lucide-react'
 import type { DashboardData, ClusterWorker, ClusterTask, FeedItem } from '@/types'
+import { formatTokens } from '@/lib/utils'
 
 // Fallback mock data for charts (used when no real data)
 const mockActivityData = [
@@ -60,12 +61,6 @@ interface MetricsPanelProps {
 }
 
 type ChartType = 'activity' | 'agents' | 'status'
-
-function formatTokens(n: number): string {
-  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`
-  if (n >= 1_000) return `${(n / 1_000).toFixed(1)}K`
-  return String(n)
-}
 
 export function MetricsPanel({ stats: clusterStats, workers, feed, tasks }: MetricsPanelProps = {}) {
   const [isExpanded, setIsExpanded] = useState(false)

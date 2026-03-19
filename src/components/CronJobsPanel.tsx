@@ -13,6 +13,7 @@ import {
 } from 'lucide-react'
 import { toast } from 'sonner'
 import type { GatewayCronJob, GatewayCronRun, Agent } from '@/types'
+import { timeAgo as timeAgoUtil } from '@/lib/utils'
 
 interface CronJobsPanelProps {
   cronJobs: GatewayCronJob[]
@@ -38,14 +39,7 @@ function formatDuration(ms: number): string {
 }
 
 function timeAgo(iso: string): string {
-  const diff = Date.now() - new Date(iso).getTime()
-  if (diff < 60_000) return 'just now'
-  const mins = Math.floor(diff / 60_000)
-  if (mins < 60) return `${mins}m ago`
-  const hours = Math.floor(mins / 60)
-  if (hours < 24) return `${hours}h ago`
-  const days = Math.floor(hours / 24)
-  return `${days}d ago`
+  return timeAgoUtil(new Date(iso).getTime())
 }
 
 function extractModelShort(model: string): string {
