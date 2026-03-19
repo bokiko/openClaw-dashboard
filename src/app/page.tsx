@@ -344,6 +344,7 @@ function DashboardContent() {
             onClose={() => setNotificationsOpen(false)}
             onMarkRead={(id: number) => markNotificationRead(String(id))}
             onMarkAllRead={clearAllNotifications}
+            onDelete={(id: number) => deleteNotification(String(id))}
           />
         )}
       </AnimatePresence>
