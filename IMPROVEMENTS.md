@@ -1,3 +1,15 @@
+## 2026-03-18 — Accessibility: ARIA labels, keyboard nav, screen reader support
+
+Added meaningful accessibility attributes across 5 core interactive components.
+TaskCard: role=article, aria-label, tabIndex, keyboard (Enter/Space) activation.
+NotificationPanel: aria-live=polite, role=list/listitem, icon button aria-labels.
+MissionQueue: search input aria-label, filter row role=tablist/tab with aria-selected.
+Header: aria-current=page on active nav, aria-label on icon-only buttons.
+AgentAvatar: aria-label with agent name + status for screen readers.
+No visual changes, no new dependencies.
+**Files changed:** TaskCard.tsx, NotificationPanel.tsx, MissionQueue.tsx, Header.tsx, AgentAvatar.tsx
+**Lines:** +33 / -8
+
 ## 2026-03-18 — Testing: Unit tests for utils and activity-mappers
 
 Added comprehensive unit test suites for two previously untested modules.
@@ -23,3 +35,19 @@ Wired the Header's magnifier icon to the existing CommandPalette toggle.
 
 Added ⌘F shortcut and search bar to MissionQueue for instant client-side
 task filtering by title, tags, and assignee across all lanes.
+
+## 2026-03-18 — Performance: Lazy-load overlay components with next/dynamic
+
+Replaced static imports for 9 modal/drawer/overlay components with `next/dynamic({ ssr: false })`.
+These components only render on user interaction (clicks, keyboard shortcuts), so their JS
+does not need to be in the initial bundle. Deferring them reduces the JS parsed on first load,
+improving TTI on slower devices and connections.
+
+Components now lazy-loaded: LiveFeed, NotificationPanel, TaskEditModal, TaskCreateModal,
+AgentModal, RoutineManager, CommandPalette, KeyboardShortcutsDialog, ChatPanel.
+
+Header, AgentStrip, MissionQueue, MetricsPanel, CronJobsPanel remain statically imported
+as they render on every page load.
+
+**Files changed:** src/app/page.tsx
+**Lines:** +21 / -10

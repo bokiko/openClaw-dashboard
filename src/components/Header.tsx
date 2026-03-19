@@ -80,6 +80,7 @@ export default function Header({
           {/* View Toggle */}
           <div className="flex items-center gap-0.5 sm:gap-1 bg-secondary/30 rounded-lg p-0.5 ml-1 sm:ml-2">
             <Link href="/"
+              aria-current={currentView === 'dashboard' ? 'page' : undefined}
               className={cn("px-2 sm:px-3 py-1 rounded-md text-[11px] sm:text-xs font-medium transition-colors whitespace-nowrap",
                 currentView === 'dashboard' ? "bg-secondary text-foreground" : "text-muted-foreground hover:text-foreground"
               )}>
@@ -87,6 +88,7 @@ export default function Header({
               <span className="hidden sm:inline">Mission Control</span>
             </Link>
             <Link href="/activity"
+              aria-current={currentView === 'activity' ? 'page' : undefined}
               className={cn("px-2 sm:px-3 py-1 rounded-md text-[11px] sm:text-xs font-medium transition-colors whitespace-nowrap",
                 currentView === 'activity' ? "bg-secondary text-foreground" : "text-muted-foreground hover:text-foreground"
               )}>
@@ -150,6 +152,7 @@ export default function Header({
                 "hover:border-border/80 hover:text-foreground hover:bg-secondary"
               )}
               title="View repository"
+              aria-label="View repository on GitHub"
             >
               <Github className="w-4 h-4" />
             </a>
@@ -164,6 +167,7 @@ export default function Header({
               "hover:border-border/80 hover:text-foreground hover:bg-secondary"
             )}
             title={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
+            aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
           >
             {theme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
           </button>
@@ -177,6 +181,7 @@ export default function Header({
           {/* Activity Feed Toggle */}
           <button
             onClick={onFeedToggle}
+            aria-label={feedOpen ? 'Close activity feed' : 'Open activity feed'}
             className={cn(
               "relative w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center transition-all duration-200",
               feedOpen

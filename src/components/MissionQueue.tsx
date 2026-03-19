@@ -221,6 +221,7 @@ export default function MissionQueue({
             value={searchQuery}
             onChange={e => setSearchQuery(e.target.value)}
             placeholder="Search tasks… (⌘F)"
+            aria-label="Search tasks"
             className={cn(
               "w-full pl-9 pr-8 py-2 text-sm rounded-xl",
               "bg-secondary/40 border border-border/50",
@@ -234,6 +235,7 @@ export default function MissionQueue({
             <button
               onClick={() => { setSearchQuery(''); searchRef.current?.focus(); }}
               className="absolute right-2.5 top-1/2 -translate-y-1/2 w-5 h-5 rounded-full flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
+              aria-label="Clear search"
             >
               <X className="w-3 h-3" />
             </button>
@@ -250,7 +252,7 @@ export default function MissionQueue({
       )}
 
       {/* Filter tabs */}
-      <div className="flex flex-wrap items-center justify-center gap-1.5 mb-6 sm:mb-8 px-2 sm:px-4">
+      <div className="flex flex-wrap items-center justify-center gap-1.5 mb-6 sm:mb-8 px-2 sm:px-4" role="tablist" aria-label="Filter tasks by status">
         {filters.map(f => {
           const count = f.id === 'all'
             ? searchFiltered.length
@@ -264,6 +266,9 @@ export default function MissionQueue({
           return (
             <button
               key={f.id}
+              role="tab"
+              aria-selected={isActive}
+              aria-label={`${f.label} (${count})`}
               onClick={() => onStatusFilterChange(f.id)}
               className={cn(
                 "flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm font-medium rounded-xl transition-all duration-200",
