@@ -23,3 +23,14 @@ Wired the Header's magnifier icon to the existing CommandPalette toggle.
 
 Added ⌘F shortcut and search bar to MissionQueue for instant client-side
 task filtering by title, tags, and assignee across all lanes.
+
+## 2026-03-19 — Accessibility: ARIA labels, keyboard nav, semantic roles
+
+Added comprehensive accessibility improvements across 6 core components.
+The dashboard had only 1 aria-label before this change. Now screen readers
+can navigate TaskCards (role=button + keyboard Enter/Space), Header stats
+are announced via aria-live, kanban lanes are labeled regions, and all icon
+buttons have proper aria-label attributes.
+**Files changed:** src/components/TaskCard.tsx, Header.tsx, MissionQueue.tsx,
+NotificationBell.tsx, KeyboardShortcutsDialog.tsx, src/lib/utils.ts
+**Lines:** +44 / -11
