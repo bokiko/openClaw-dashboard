@@ -2,7 +2,7 @@
 
 import { motion } from 'framer-motion';
 import { Clock, CheckCircle2, Tag, CheckSquare, MessageSquare, Package } from 'lucide-react';
-import { cn, formatUTC, formatTokens } from '@/lib/utils';
+import { cn, formatUTC, formatTokens, srOnly } from '@/lib/utils';
 import type { Agent, Task } from '@/types';
 import { PRIORITY_CONFIG } from '@/types';
 import AgentAvatar from './AgentAvatar';
@@ -17,8 +17,8 @@ interface TaskCardProps {
 
 export default function TaskCard({ task, agents, onClick, compact = false, isDragging = false }: TaskCardProps) {
   const priority = PRIORITY_CONFIG[task.priority];
-  const assignee = task.assigneeId 
-    ? agents.find(a => a.id === task.assigneeId) 
+  const assignee = task.assigneeId
+    ? agents.find(a => a.id === task.assigneeId)
     : null;
 
   const isDone = task.status === 'done';
@@ -30,14 +30,26 @@ export default function TaskCard({ task, agents, onClick, compact = false, isDra
   const commentCount = task.comments?.length ?? 0;
   const deliverableCount = task.deliverables?.length ?? 0;
 
+  const descriptionId = `task-desc-${task.id}`;
+
   return (
     <motion.div
+      role="button"
+      tabIndex={0}
+      aria-label={task.title}
+      aria-describedby={descriptionId}
       onClick={onClick}
+      onKeyDown={(e: React.KeyboardEvent) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          onClick();
+        }
+      }}
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -10 }}
-      whileHover={{ 
-        y: -4, 
+      whileHover={{
+        y: -4,
         boxShadow: '0 12px 32px rgba(0,0,0,0.5), 0 0 0 1px var(--surface-card-hover-border)'
       }}
       transition={{ duration: 0.2, ease: 'easeOut' }}
@@ -47,6 +59,10 @@ export default function TaskCard({ task, agents, onClick, compact = false, isDra
         isDragging && "ring-2 ring-green-500 shadow-xl shadow-green-500/20"
       )}
     >
+      <span id={descriptionId} className={srOnly}>
+        {task.description || task.title}. Status: {task.status}. Priority: {priority.label}.
+        {assignee ? ` Assigned to ${assignee.name}.` : ' Unassigned.'}
+      </span>
       {/* Header: Title + Priority */}
       <div className="flex items-start justify-between gap-3 mb-2">
         <h3 className={cn(

@@ -27,6 +27,10 @@ export function formatTokens(count: number): string {
   return String(count);
 }
 
+/** CSS class string that visually hides content but keeps it accessible to screen readers */
+export const srOnly =
+  'absolute w-px h-px p-0 -m-px overflow-hidden whitespace-nowrap border-0' as const;
+
 export function formatUTC(epochMs: number): string {
   const d = new Date(epochMs);
   const year = d.getUTCFullYear();

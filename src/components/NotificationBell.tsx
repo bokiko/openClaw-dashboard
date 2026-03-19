@@ -10,6 +10,7 @@ interface NotificationBellProps {
 export default function NotificationBell({ unreadCount, onClick }: NotificationBellProps) {
   return (
     <button
+      type="button"
       onClick={onClick}
       className="relative p-2 hover:bg-muted rounded-lg transition-colors"
       aria-label={`Notifications${unreadCount > 0 ? ` (${unreadCount} unread)` : ''}`}

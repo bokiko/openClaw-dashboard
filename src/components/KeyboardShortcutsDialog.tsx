@@ -78,7 +78,7 @@ export function KeyboardShortcutsDialog({ open, onOpenChange }: KeyboardShortcut
                 className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50"
               />
             </Dialog.Overlay>
-            <Dialog.Content asChild>
+            <Dialog.Content asChild aria-labelledby="keyboard-shortcuts-title">
               <motion.div
                 initial={{ opacity: 0, scale: 0.95, y: -20 }}
                 animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -96,11 +96,11 @@ export function KeyboardShortcutsDialog({ open, onOpenChange }: KeyboardShortcut
                 <div className="flex items-center justify-between px-5 py-4 border-b border-border">
                   <div className="flex items-center gap-2.5">
                     <Keyboard className="w-5 h-5 text-muted-foreground" />
-                    <Dialog.Title className="text-base font-semibold text-foreground">
+                    <Dialog.Title id="keyboard-shortcuts-title" className="text-base font-semibold text-foreground">
                       Keyboard Shortcuts
                     </Dialog.Title>
                   </div>
-                  <Dialog.Close className="p-1.5 hover:bg-muted rounded-lg transition-colors">
+                  <Dialog.Close className="p-1.5 hover:bg-muted rounded-lg transition-colors" aria-label="Close keyboard shortcuts">
                     <X className="w-4 h-4 text-muted-foreground" />
                   </Dialog.Close>
                 </div>
