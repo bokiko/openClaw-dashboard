@@ -5,7 +5,15 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
-export function timeAgo(epochMs: number): string {
+/**
+ * Returns a human-readable relative time string.
+ * Accepts epoch milliseconds (number), an ISO 8601 string, or undefined.
+ * When called with undefined, returns 'Never'.
+ */
+export function timeAgo(input: number | string | undefined): string {
+  if (input === undefined || input === null) return 'Never';
+  const epochMs = typeof input === 'string' ? new Date(input).getTime() : input;
+  if (isNaN(epochMs)) return 'Never';
   const diff = Math.max(0, Date.now() - epochMs);
   const seconds = Math.floor(diff / 1000);
   if (seconds < 60) return 'just now';
