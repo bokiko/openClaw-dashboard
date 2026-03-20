@@ -8,6 +8,7 @@ import {
 import { useTheme } from '@/lib/useTheme';
 import { cn } from '@/lib/utils';
 import NotificationBell from './NotificationBell';
+import { ConnectionStatusBadge } from './ConnectionStatusBadge';
 
 const LOGO_ICONS: Record<string, LucideIcon> = {
   zap: Zap, brain: Brain, bot: Bot, flame: Flame, shield: Shield,
@@ -31,6 +32,11 @@ interface HeaderProps {
   logoIcon?: string;
   accentColor?: string;
   currentView?: 'dashboard' | 'activity';
+  connected?: boolean;
+  lastUpdated?: number | null;
+  connectionError?: string | null;
+  onRefresh?: () => void;
+  refreshing?: boolean;
 }
 
 export default function Header({
@@ -49,6 +55,11 @@ export default function Header({
   repoUrl,
   logoIcon = 'zap',
   currentView = 'dashboard',
+  connected = true,
+  lastUpdated = null,
+  connectionError = null,
+  onRefresh,
+  refreshing = false,
 }: HeaderProps) {
   const LogoIcon = LOGO_ICONS[logoIcon] || Zap;
   const { theme, toggle: toggleTheme } = useTheme();
@@ -140,6 +151,15 @@ export default function Header({
               <kbd className="kbd ml-1">⌘K</kbd>
             </button>
           )}
+
+          {/* Connection Status */}
+          <ConnectionStatusBadge
+            connected={connected}
+            lastUpdated={lastUpdated}
+            error={connectionError}
+            onRefresh={onRefresh}
+            refreshing={refreshing}
+          />
 
           {repoUrl && (
             <a

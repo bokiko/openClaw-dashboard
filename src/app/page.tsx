@@ -268,6 +268,11 @@ function DashboardContent() {
           notificationsOpen={notificationsOpen}
           onNotificationsToggle={handleNotificationsToggle}
           currentView="dashboard"
+          connected={connected}
+          lastUpdated={lastUpdated ?? null}
+          connectionError={error}
+          onRefresh={refresh}
+          refreshing={loading}
         />
 
         <AgentStrip
@@ -311,14 +316,7 @@ function DashboardContent() {
           </div>
         )}
 
-        {/* Connection + last updated indicator */}
-        <div className="fixed bottom-4 right-4 flex items-center gap-2 text-xs text-muted-foreground/50">
-          <div className={`w-1.5 h-1.5 rounded-full ${connected ? 'bg-green-500' : 'bg-red-500 animate-pulse'}`} />
-          <span>{connected ? 'Live' : 'Reconnecting...'}</span>
-          {lastUpdated && (
-            <span>| {new Date(lastUpdated).toLocaleTimeString()}</span>
-          )}
-        </div>
+
       </div>
 
       {/* Feed Drawer */}

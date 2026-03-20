@@ -163,6 +163,11 @@ function ActivityContent() {
           notificationsOpen={notificationsOpen}
           onNotificationsToggle={() => setNotificationsOpen(prev => !prev)}
           currentView="activity"
+          connected={connected}
+          lastUpdated={lastUpdated ?? null}
+          connectionError={error}
+          onRefresh={refresh}
+          refreshing={loading}
         />
 
         <ErrorBoundary>
@@ -197,14 +202,7 @@ function ActivityContent() {
           <ActivityTimeline items={filteredItems} agents={agents} hasFilters={hasFilters} />
         </ErrorBoundary>
 
-        {/* Connection indicator */}
-        <div className="fixed bottom-4 right-4 flex items-center gap-2 text-xs text-muted-foreground/50">
-          <div className={`w-1.5 h-1.5 rounded-full ${connected ? 'bg-green-500' : 'bg-red-500 animate-pulse'}`} />
-          <span>{connected ? 'Live' : 'Reconnecting...'}</span>
-          {lastUpdated && (
-            <span>| {new Date(lastUpdated).toLocaleTimeString()}</span>
-          )}
-        </div>
+
       </div>
     </div>
   );
