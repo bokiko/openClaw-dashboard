@@ -1,3 +1,9 @@
+## 2026-03-20 — Code Quality: Consolidate duplicate timeAgo implementations
+
+Removed 5 local copies of `timeAgo` scattered across components (ChannelMonitor, CronJobsPanel, NotificationPanel, RoutineManager, SpawnedSessionRow). Extended the canonical `timeAgo()` in `src/lib/utils.ts` to accept `number | string | undefined` so all call sites work without adapters. Also removed a duplicate `formatTokens` from SpawnedSessionRow. All 79 tests pass, build clean.
+**Files changed:** src/lib/utils.ts, src/components/ChannelMonitor.tsx, src/components/CronJobsPanel.tsx, src/components/NotificationPanel.tsx, src/components/RoutineManager.tsx, src/components/SpawnedSessionRow.tsx
+**Lines:** +14 / -53
+
 ## 2026-03-18 — Accessibility: ARIA labels, keyboard nav, screen reader support
 
 Added meaningful accessibility attributes across 5 core interactive components.
