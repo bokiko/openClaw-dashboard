@@ -1,7 +1,8 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { X, CheckCheck, Info, CheckCircle, AlertTriangle, AlertOctagon } from 'lucide-react';
+import { X, CheckCheck, Info, CheckCircle, AlertTriangle, AlertOctagon, Bell } from 'lucide-react';
+import EmptyState from './EmptyState';
 import type { Notification } from '@/types';
 
 interface NotificationPanelProps {
@@ -78,9 +79,11 @@ export default function NotificationPanel({
       {/* List */}
       <div className="flex-1 overflow-y-auto" aria-live="polite">
         {notifications.length === 0 ? (
-          <div className="flex items-center justify-center py-12 text-muted-foreground text-sm">
-            No notifications
-          </div>
+          <EmptyState
+            icon={Bell}
+            title="All clear"
+            description="No notifications yet"
+          />
         ) : (
           <div role="list">
           {notifications.map(n => {

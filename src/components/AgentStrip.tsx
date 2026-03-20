@@ -1,8 +1,10 @@
 'use client';
 
 import { AnimatePresence } from 'framer-motion';
+import { Users } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { Agent, Task, SpawnedSession } from '@/types';
+import EmptyState from './EmptyState';
 import AgentAvatar from './AgentAvatar';
 import { SpawnedSessionGroup } from './SpawnedSessionRow';
 
@@ -68,8 +70,20 @@ export default function AgentStrip({
           </span>
         </button>
 
+        {/* Empty state when no agents */}
+        {agents.length === 0 && (
+          <EmptyState
+            icon={Users}
+            title="No agents connected"
+            description="Connect an OpenClaw gateway to see agents"
+            compact
+          />
+        )}
+
         {/* Separator */}
-        <div className="w-px h-6 bg-border/50 mx-0.5 hidden sm:block" />
+        {agents.length > 0 && (
+          <div className="w-px h-6 bg-border/50 mx-0.5 hidden sm:block" />
+        )}
 
         {/* Working (Busy) Agents */}
         {workingAgents.map(agent => (
