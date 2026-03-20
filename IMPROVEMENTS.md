@@ -57,3 +57,15 @@ as they render on every page load.
 
 **Files changed:** src/app/page.tsx
 **Lines:** +21 / -10
+
+## 2026-03-20 — New Feature: Runtime settings panel
+
+Added a slide-in SettingsPanel component accessible via a gear icon in the Header. Users can change display preferences at runtime with no page reload:
+- Accent color: 8 color swatches applied instantly via CSS custom properties on documentElement
+- Card density: Compact / Comfortable toggle (density-compact class on root)
+- Time display: UTC / Local preference persisted to localStorage
+- Theme toggle integrated into the panel for convenience
+
+All preferences survive page reloads via localStorage. Settings constants extracted to settings-shared.ts to avoid importing the Node.js fs module into client-side bundles. No new dependencies.
+**Files changed:** src/components/SettingsPanel.tsx (new), src/lib/useSettings.ts (new), src/lib/settings-shared.ts (new), src/components/Header.tsx, src/app/page.tsx, src/lib/settings.ts
+**Lines:** +303 / -17
