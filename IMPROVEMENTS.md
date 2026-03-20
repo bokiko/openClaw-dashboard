@@ -57,3 +57,9 @@ as they render on every page load.
 
 **Files changed:** src/app/page.tsx
 **Lines:** +21 / -10
+
+## 2026-03-20 — UI/UX: Unified EmptyState component across dashboard panels
+
+Added a reusable `EmptyState` component and applied it consistently across 5 locations that previously had minimal or inconsistent empty state treatment. NotificationPanel now shows a Bell icon + "All clear" instead of bare text. LiveFeed shows Activity icon + description. MissionQueue grid and kanban lanes use compact variants with contextual icons. AgentStrip now has a proper empty state (Users icon + "No agents connected") where previously there was nothing at all. All variants use framer-motion fade-in and design system CSS vars.
+**Files changed:** src/components/EmptyState.tsx (new), AgentStrip.tsx, LiveFeed.tsx, MissionQueue.tsx, NotificationPanel.tsx
+**Lines:** +137 / -38
