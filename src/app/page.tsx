@@ -38,6 +38,7 @@ const KeyboardShortcutsDialog = dynamic(
   { ssr: false }
 );
 const ChatPanel = dynamic(() => import('@/components/ChatPanel'), { ssr: false });
+const SettingsPanel = dynamic(() => import('@/components/SettingsPanel'), { ssr: false });
 
 // ── Page Component ──────────────────────────────────────────────────────
 
@@ -71,6 +72,7 @@ function DashboardContent() {
   const [routinesOpen, setRoutinesOpen] = useState(false);
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
   const [paletteOpen, setPaletteOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
 
   useEffect(() => { setMounted(true); }, []);
 
@@ -96,6 +98,7 @@ function DashboardContent() {
         setAgentDetailId(null);
         setFeedOpen(false);
         setNotificationsOpen(false);
+        setSettingsOpen(false);
       }
       // Cmd/Ctrl + K for command palette
       if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
@@ -117,6 +120,10 @@ function DashboardContent() {
 
   const handleNotificationsToggle = useCallback(() => {
     setNotificationsOpen(prev => !prev);
+  }, []);
+
+  const handleSettingsToggle = useCallback(() => {
+    setSettingsOpen(prev => !prev);
   }, []);
 
   const unreadNotifications = notifications.filter(n => !n.read).length;
@@ -267,6 +274,8 @@ function DashboardContent() {
           unreadNotifications={unreadNotifications}
           notificationsOpen={notificationsOpen}
           onNotificationsToggle={handleNotificationsToggle}
+          settingsOpen={settingsOpen}
+          onSettingsToggle={handleSettingsToggle}
           currentView="dashboard"
         />
 
@@ -402,6 +411,16 @@ function DashboardContent() {
             />
           ) : null;
         })()}
+      </AnimatePresence>
+
+      {/* Settings Panel */}
+      <AnimatePresence>
+        {settingsOpen && (
+          <SettingsPanel
+            open={settingsOpen}
+            onClose={() => setSettingsOpen(false)}
+          />
+        )}
       </AnimatePresence>
     </div>
   );

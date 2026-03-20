@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import {
-  Activity, Zap, Command, Github, Sun, Moon,
+  Activity, Zap, Command, Github, Sun, Moon, Settings,
   Brain, Bot, Flame, Shield, Cpu, Rocket, Sparkles, Eye, type LucideIcon,
 } from 'lucide-react';
 import { useTheme } from '@/lib/useTheme';
@@ -31,6 +31,8 @@ interface HeaderProps {
   logoIcon?: string;
   accentColor?: string;
   currentView?: 'dashboard' | 'activity';
+  settingsOpen?: boolean;
+  onSettingsToggle?: () => void;
 }
 
 export default function Header({
@@ -49,6 +51,8 @@ export default function Header({
   repoUrl,
   logoIcon = 'zap',
   currentView = 'dashboard',
+  settingsOpen = false,
+  onSettingsToggle,
 }: HeaderProps) {
   const LogoIcon = LOGO_ICONS[logoIcon] || Zap;
   const { theme, toggle: toggleTheme } = useTheme();
@@ -156,6 +160,27 @@ export default function Header({
             >
               <Github className="w-4 h-4" />
             </a>
+          )}
+
+          {/* Settings Toggle */}
+          {onSettingsToggle && (
+            <button
+              onClick={onSettingsToggle}
+              aria-label={settingsOpen ? 'Close settings' : 'Open settings'}
+              className={cn(
+                "w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center transition-all duration-200",
+                settingsOpen
+                  ? "border"
+                  : "bg-secondary/50 text-muted-foreground border border-border hover:border-border/80 hover:text-foreground hover:bg-secondary"
+              )}
+              style={settingsOpen ? {
+                background: 'var(--accent-primary-light)',
+                color: 'var(--accent-primary)',
+                borderColor: 'color-mix(in srgb, var(--accent-primary) 30%, transparent)',
+              } : undefined}
+            >
+              <Settings className="w-4 h-4" />
+            </button>
           )}
 
           {/* Theme Toggle */}
