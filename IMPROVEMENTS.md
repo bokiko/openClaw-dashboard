@@ -63,3 +63,9 @@ as they render on every page load.
 Added a reusable `EmptyState` component and applied it consistently across 5 locations that previously had minimal or inconsistent empty state treatment. NotificationPanel now shows a Bell icon + "All clear" instead of bare text. LiveFeed shows Activity icon + description. MissionQueue grid and kanban lanes use compact variants with contextual icons. AgentStrip now has a proper empty state (Users icon + "No agents connected") where previously there was nothing at all. All variants use framer-motion fade-in and design system CSS vars.
 **Files changed:** src/components/EmptyState.tsx (new), AgentStrip.tsx, LiveFeed.tsx, MissionQueue.tsx, NotificationPanel.tsx
 **Lines:** +137 / -38
+
+## 2026-03-20 — New Feature: Connection status badge in header
+
+Replaced the fixed bottom-right 6px connection dot with a proper ConnectionStatusBadge component integrated into the Header toolbar. Three states: connected (accent pulse dot + relative time), refreshing (spinner), error (red WifiOff + retry). Relative time updates every 5s. Clicking the badge triggers a manual refresh. Removed duplicate bottom-right indicators from both pages.
+**Files changed:** src/components/ConnectionStatusBadge.tsx (new), Header.tsx, page.tsx, activity/page.tsx
+**Lines:** +155 / -16
