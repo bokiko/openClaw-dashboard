@@ -47,10 +47,13 @@ describe('timeAgo', () => {
     expect(timeAgo(now - 59 * 60_000)).toBe('59m ago');
   });
 
-  it('returns hours for 1-23 hours ago', () => {
+  it('returns hours with minutes precision for 1-23 hours ago', () => {
+    // Exact hours (no remaining minutes) → hours only
     expect(timeAgo(now - 60 * 60_000)).toBe('1h ago');
     expect(timeAgo(now - 6 * 60 * 60_000)).toBe('6h ago');
-    expect(timeAgo(now - 23 * 60 * 60_000)).toBe('23h ago');
+    // Hours with remaining minutes → hours + minutes
+    expect(timeAgo(now - (2 * 60 + 30) * 60_000)).toBe('2h 30m ago');
+    expect(timeAgo(now - (23 * 60 + 45) * 60_000)).toBe('23h 45m ago');
   });
 
   it('returns days for 24+ hours ago', () => {
@@ -60,6 +63,24 @@ describe('timeAgo', () => {
 
   it('handles future timestamps gracefully (diff clamped to 0)', () => {
     expect(timeAgo(now + 10_000)).toBe('just now');
+  });
+
+  it('returns "Never" for undefined input', () => {
+    expect(timeAgo(undefined)).toBe('Never');
+  });
+
+  it('accepts ISO 8601 date strings', () => {
+    const fiveMinAgo = new Date(now - 5 * 60_000).toISOString();
+    expect(timeAgo(fiveMinAgo)).toBe('5m ago');
+  });
+
+  it('returns "Never" for null input (edge case)', () => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    expect(timeAgo(null as any)).toBe('Never');
+  });
+
+  it('returns "Never" for invalid date strings', () => {
+    expect(timeAgo('not-a-date')).toBe('Never');
   });
 });
 
