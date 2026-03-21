@@ -51,12 +51,24 @@ function DashboardContent() {
   const router = useRouter();
 
   /** Task lanes are read-only from gateway — drag-drop is disabled entirely */
-  const handleTaskMove = useCallback((taskId: string, newStatus: TaskStatus) => {
+  const handleTaskMove = useCallback(async (taskId: string, newStatus: TaskStatus) => {
     if (dataSource === 'gateway') return; // should not be called — DnD is disabled
-    // TODO: implement local task move via API
-    void taskId;
-    void newStatus;
-  }, [dataSource]);
+    try {
+      const res = await fetch(`/api/tasks/${taskId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: newStatus }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        toast.error(err.error ?? 'Failed to move task');
+        refresh(); // revert optimistic UI
+      }
+    } catch {
+      toast.error('Network error — could not move task');
+      refresh();
+    }
+  }, [dataSource, refresh]);
 
   const [mounted, setMounted] = useState(false);
   const [feedOpen, setFeedOpen] = useState(false);
