@@ -43,6 +43,9 @@ function makeTask(overrides: Partial<ClusterTask> = {}): ClusterTask {
     lane: 'in_progress',
     assignees: [],
     labels: [],
+    checklist: [],
+    comments: [],
+    deliverables: [],
     ...overrides,
   };
 }
