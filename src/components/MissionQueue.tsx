@@ -21,7 +21,8 @@ import {
   useSortable,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { Search, X } from 'lucide-react';
+import { Search, X, Inbox } from 'lucide-react';
+import EmptyState from './EmptyState';
 import { cn } from '@/lib/utils';
 import type { Agent, Task, TaskStatus } from '@/types';
 import { STATUS_CONFIG, LANE_ORDER } from '@/types';
@@ -357,15 +358,12 @@ export default function MissionQueue({
             </SortableContext>
 
             {gridTasks.length === 0 && (
-              <motion.div 
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                className="flex flex-col items-center justify-center h-[200px] rounded-2xl border border-dashed border-border/30 bg-gradient-to-b from-transparent to-background/30"
-              >
-                <span className="text-muted-foreground/50">
-                  No {STATUS_CONFIG[statusFilter as TaskStatus]?.label.toLowerCase() || ''} tasks
-                </span>
-              </motion.div>
+              <EmptyState
+                icon={Inbox}
+                title={`No ${STATUS_CONFIG[statusFilter as TaskStatus]?.label.toLowerCase() || ''} tasks`}
+                compact
+                className="h-[200px] rounded-2xl border border-dashed border-border/30 bg-gradient-to-b from-transparent to-background/30"
+              />
             )}
           </div>
         )}
@@ -502,27 +500,29 @@ function DroppableLane({
           )}
 
           {tasks.length === 0 && (
-            <motion.div 
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              className={cn(
-                "flex flex-col items-center justify-center h-[140px] rounded-2xl border border-dashed bg-gradient-to-b from-transparent to-background/30",
-                isOver ? "border-solid" : "border-border/30"
-              )}
-              style={isOver ? { borderColor: config.color } : {}}
-            >
-              <div 
-                className="w-8 h-8 rounded-lg flex items-center justify-center mb-2"
-                style={{ backgroundColor: `${config.bgColor}` }}
+            isOver ? (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="flex flex-col items-center justify-center h-[140px] rounded-2xl border border-solid bg-gradient-to-b from-transparent to-background/30"
+                style={{ borderColor: config.color }}
               >
-                <span className="text-sm" style={{ color: config.color }}>
-                  {isOver ? '↓' : '○'}
-                </span>
-              </div>
-              <span className="text-xs text-muted-foreground/50">
-                {isOver ? 'Drop here' : `No ${config.label.toLowerCase()} tasks`}
-              </span>
-            </motion.div>
+                <div
+                  className="w-8 h-8 rounded-lg flex items-center justify-center mb-2"
+                  style={{ backgroundColor: config.bgColor }}
+                >
+                  <span className="text-sm" style={{ color: config.color }}>↓</span>
+                </div>
+                <span className="text-xs text-muted-foreground/50">Drop here</span>
+              </motion.div>
+            ) : (
+              <EmptyState
+                icon={Inbox}
+                title={`No ${config.label.toLowerCase()} tasks`}
+                compact
+                className="h-[140px] rounded-2xl border border-dashed border-border/30 bg-gradient-to-b from-transparent to-background/30"
+              />
+            )
           )}
         </div>
       </SortableContext>

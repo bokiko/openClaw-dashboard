@@ -2,6 +2,7 @@
 
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Activity, MessageSquare, CheckCircle, AlertCircle } from 'lucide-react';
+import EmptyState from './EmptyState';
 import { cn } from '@/lib/utils';
 import { timeAgo } from '@/lib/utils';
 import type { Agent, FeedItem } from '@/types';
@@ -125,9 +126,12 @@ export default function LiveFeed({
           </AnimatePresence>
 
           {typeFiltered.length === 0 && (
-            <div className="px-5 py-16 text-center text-sm text-muted-foreground">
-              No activity to show
-            </div>
+            <EmptyState
+              icon={Activity}
+              title="No activity yet"
+              description="Events will appear here as agents work"
+              className="py-16"
+            />
           )}
         </div>
 

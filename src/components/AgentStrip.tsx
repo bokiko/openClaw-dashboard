@@ -1,8 +1,10 @@
 'use client';
 
 import { AnimatePresence } from 'framer-motion';
+import { Users } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { Agent, Task, SpawnedSession } from '@/types';
+import EmptyState from './EmptyState';
 import AgentAvatar from './AgentAvatar';
 import { SpawnedSessionGroup } from './SpawnedSessionRow';
 
@@ -50,75 +52,84 @@ export default function AgentStrip({
         />
       )}
 
-      <div className="flex flex-wrap items-center justify-center gap-1.5 sm:gap-2 px-2 sm:px-4">
-        {/* All Button */}
-        <button
-          onClick={() => selectedAgentId && onAgentClick(selectedAgentId)}
-          className={cn(
-            "flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-1.5 sm:py-2 rounded-xl text-sm font-medium transition-all duration-200",
-            selectedAgentId === null
-              ? "bg-secondary text-foreground border border-border/80 shadow-sm"
-              : "text-muted-foreground hover:text-foreground hover:bg-secondary/50"
+      {agents.length === 0 ? (
+        <EmptyState
+          icon={Users}
+          title="No agents connected"
+          description="Connect an OpenClaw gateway to see agents"
+          compact
+        />
+      ) : (
+        <div className="flex flex-wrap items-center justify-center gap-1.5 sm:gap-2 px-2 sm:px-4">
+          {/* All Button */}
+          <button
+            onClick={() => selectedAgentId && onAgentClick(selectedAgentId)}
+            className={cn(
+              "flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-1.5 sm:py-2 rounded-xl text-sm font-medium transition-all duration-200",
+              selectedAgentId === null
+                ? "bg-secondary text-foreground border border-border/80 shadow-sm"
+                : "text-muted-foreground hover:text-foreground hover:bg-secondary/50"
+            )}
+          >
+            <div className="w-2 h-2 rounded-full bg-gradient-to-r from-green-DEFAULT to-blue-DEFAULT" />
+            <span>All</span>
+            <span className="text-xs text-muted-foreground font-tabular">
+              {agents.length}
+            </span>
+          </button>
+
+          {/* Separator */}
+          <div className="w-px h-6 bg-border/50 mx-0.5 hidden sm:block" />
+
+          {/* Working (Busy) Agents */}
+          {workingAgents.map(agent => (
+            <AgentButton
+              key={agent.id}
+              agent={agent}
+              tasks={tasks}
+              isSelected={selectedAgentId === agent.id}
+              onClick={() => onAgentClick(agent.id)}
+              onDoubleClick={() => onAgentDetail(agent.id)}
+              spawnCount={spawnsByAgent.get(agent.id)?.length || 0}
+            />
+          ))}
+
+          {/* Idle separator */}
+          {idleAgents.length > 0 && workingAgents.length > 0 && (
+            <div className="w-px h-6 bg-border/30 mx-0.5 hidden sm:block" />
           )}
-        >
-          <div className="w-2 h-2 rounded-full bg-gradient-to-r from-green-DEFAULT to-blue-DEFAULT" />
-          <span>All</span>
-          <span className="text-xs text-muted-foreground font-tabular">
-            {agents.length}
-          </span>
-        </button>
 
-        {/* Separator */}
-        <div className="w-px h-6 bg-border/50 mx-0.5 hidden sm:block" />
+          {/* Idle Agents */}
+          {idleAgents.map(agent => (
+            <AgentButton
+              key={agent.id}
+              agent={agent}
+              tasks={tasks}
+              isSelected={selectedAgentId === agent.id}
+              onClick={() => onAgentClick(agent.id)}
+              onDoubleClick={() => onAgentDetail(agent.id)}
+              spawnCount={spawnsByAgent.get(agent.id)?.length || 0}
+            />
+          ))}
 
-        {/* Working (Busy) Agents */}
-        {workingAgents.map(agent => (
-          <AgentButton
-            key={agent.id}
-            agent={agent}
-            tasks={tasks}
-            isSelected={selectedAgentId === agent.id}
-            onClick={() => onAgentClick(agent.id)}
-            onDoubleClick={() => onAgentDetail(agent.id)}
-            spawnCount={spawnsByAgent.get(agent.id)?.length || 0}
-          />
-        ))}
+          {/* Offline separator */}
+          {offlineAgents.length > 0 && (workingAgents.length > 0 || idleAgents.length > 0) && (
+            <div className="w-px h-6 bg-border/20 mx-1" />
+          )}
 
-        {/* Idle separator */}
-        {idleAgents.length > 0 && workingAgents.length > 0 && (
-          <div className="w-px h-6 bg-border/30 mx-0.5 hidden sm:block" />
-        )}
-
-        {/* Idle Agents */}
-        {idleAgents.map(agent => (
-          <AgentButton
-            key={agent.id}
-            agent={agent}
-            tasks={tasks}
-            isSelected={selectedAgentId === agent.id}
-            onClick={() => onAgentClick(agent.id)}
-            onDoubleClick={() => onAgentDetail(agent.id)}
-            spawnCount={spawnsByAgent.get(agent.id)?.length || 0}
-          />
-        ))}
-
-        {/* Offline separator */}
-        {offlineAgents.length > 0 && (workingAgents.length > 0 || idleAgents.length > 0) && (
-          <div className="w-px h-6 bg-border/20 mx-1" />
-        )}
-
-        {/* Offline Agents */}
-        {offlineAgents.map(agent => (
-          <AgentButton
-            key={agent.id}
-            agent={agent}
-            isSelected={selectedAgentId === agent.id}
-            onClick={() => onAgentClick(agent.id)}
-            onDoubleClick={() => onAgentDetail(agent.id)}
-            spawnCount={spawnsByAgent.get(agent.id)?.length || 0}
-          />
-        ))}
-      </div>
+          {/* Offline Agents */}
+          {offlineAgents.map(agent => (
+            <AgentButton
+              key={agent.id}
+              agent={agent}
+              isSelected={selectedAgentId === agent.id}
+              onClick={() => onAgentClick(agent.id)}
+              onDoubleClick={() => onAgentDetail(agent.id)}
+              spawnCount={spawnsByAgent.get(agent.id)?.length || 0}
+            />
+          ))}
+        </div>
+      )}
 
       {/* Spawned sessions for selected agent */}
       <AnimatePresence>
