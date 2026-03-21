@@ -69,3 +69,14 @@ Added a slide-in SettingsPanel component accessible via a gear icon in the Heade
 All preferences survive page reloads via localStorage. Settings constants extracted to settings-shared.ts to avoid importing the Node.js fs module into client-side bundles. No new dependencies.
 **Files changed:** src/components/SettingsPanel.tsx (new), src/lib/useSettings.ts (new), src/lib/settings-shared.ts (new), src/components/Header.tsx, src/app/page.tsx, src/lib/settings.ts
 **Lines:** +303 / -17
+
+## 2026-03-21 — Bug Fix: Implement task move via PATCH API in db mode
+
+Fixed a silent data-loss bug where dragging task cards between lanes in db mode
+appeared to work (optimistic UI updated) but the new status was never persisted.
+handleTaskMove was a TODO stub that discarded both arguments. Now calls
+PATCH /api/tasks/{id} with the new status. On failure, shows a toast error
+and calls refresh() to revert the optimistic UI so the card snaps back.
+Gateway-mode guard preserved — drag-drop remains disabled for gateway sources.
+**Files changed:** src/app/page.tsx
+**Lines:** +17 / -5
