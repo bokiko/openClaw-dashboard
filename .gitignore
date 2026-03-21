@@ -59,3 +59,9 @@ settings.json
 .tldr/
 .tldrignore
 thoughts/
+
+# runtime artifacts
+.run/
+
+# export bundles
+/bundles

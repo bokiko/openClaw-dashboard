@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useMemo } from 'react'
+import { formatTokens } from '@/lib/utils'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   AreaChart,
@@ -60,12 +61,6 @@ interface MetricsPanelProps {
 }
 
 type ChartType = 'activity' | 'agents' | 'status'
-
-function formatTokens(n: number): string {
-  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`
-  if (n >= 1_000) return `${(n / 1_000).toFixed(1)}K`
-  return String(n)
-}
 
 export function MetricsPanel({ stats: clusterStats, workers, feed, tasks }: MetricsPanelProps = {}) {
   const [isExpanded, setIsExpanded] = useState(false)
