@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Wifi, WifiOff, RefreshCw, Circle, Radio } from 'lucide-react';
+import { timeAgo } from '@/lib/utils';
 
 interface ChannelInfo {
   id: string;
@@ -43,13 +44,6 @@ function formatCountdown(ms: number): string {
   return m > 0 ? `${m}m ${s}s` : `${s}s`;
 }
 
-function timeAgo(ts: number): string {
-  const diff = Date.now() - ts;
-  if (diff < 60000) return 'just now';
-  const m = Math.floor(diff / 60000);
-  if (m < 60) return `${m}m ago`;
-  return `${Math.floor(m / 60)}h ${m % 60}m ago`;
-}
 
 export function ChannelMonitor() {
   const [data, setData] = useState<ChannelData | null>(null);

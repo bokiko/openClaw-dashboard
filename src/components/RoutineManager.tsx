@@ -6,6 +6,7 @@ import { X, Plus, Calendar, Play, Pause, Trash2, Zap } from 'lucide-react';
 import { useRoutines } from '@/lib/useRoutines';
 import RoutineForm from './RoutineForm';
 import type { Agent, Routine } from '@/types';
+import { timeAgo } from '@/lib/utils';
 
 interface RoutineManagerProps {
   agents: Agent[];
@@ -14,16 +15,6 @@ interface RoutineManagerProps {
 
 const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
-function timeAgo(ts?: number): string {
-  if (!ts) return 'Never';
-  const diff = Date.now() - ts;
-  const mins = Math.floor(diff / 60_000);
-  if (mins < 1) return 'just now';
-  if (mins < 60) return `${mins}m ago`;
-  const hours = Math.floor(mins / 60);
-  if (hours < 24) return `${hours}h ago`;
-  return `${Math.floor(hours / 24)}d ago`;
-}
 
 function formatNextRun(ts?: number): string {
   if (!ts) return 'Not scheduled';
