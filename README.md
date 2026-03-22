@@ -1,4 +1,4 @@
-> **⚠️ Disclaimer:** This project is an experimental playground and a personal fun project. It is not production-ready — expect bugs, incomplete features, and rough edges. It hasn't been actively maintained or updated in a while. Contributions and feedback are welcome, but please set your expectations accordingly!
+> **⚠️ Disclaimer:** This project is an experimental playground and a personal fun project It is not production-ready — expect bugs, incomplete features, and rough edges. It hasn't been actively maintained or updated in a while. Contributions and feedback are welcome, but please set your expectations accordingly!
 
 ---
 
