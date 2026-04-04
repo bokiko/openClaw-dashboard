@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { isDbAvailable, query } from '@/lib/db';
+import type { WsEventType } from '@/types';
 
 export const dynamic = 'force-dynamic';
 
@@ -20,23 +21,42 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'agentId and message are required' }, { status: 400 });
   }
 
+  // Validate agentId to prevent prompt injection
+  if (!/^[a-zA-Z0-9_-]{1,64}$/.test(body.agentId)) {
+    return NextResponse.json({ error: 'Invalid agentId' }, { status: 400 });
+  }
+
+  // Enforce message length limit to prevent unbounded API spend
+  if (body.message.length > 10000) {
+    return NextResponse.json({ error: 'Message too long (max 10000 characters)' }, { status: 400 });
+  }
+
   // Store user message in DB
   if (isDbAvailable()) {
-    await query(
-      `INSERT INTO chat_messages (agent_id, role, content) VALUES ($1, 'user', $2)`,
-      [body.agentId, body.message.trim()],
-    );
+    try {
+      await query(
+        `INSERT INTO chat_messages (agent_id, role, content) VALUES ($1, 'user', $2)`,
+        [body.agentId, body.message.trim()],
+      );
+    } catch {
+      // DB insert is optional — continue without persisting
+    }
   }
 
   // Build message history for context
   let history: Array<{ role: string; content: string }> = [];
   if (isDbAvailable()) {
-    const historyRes = await query<{ role: string; content: string }>(
-      `SELECT role, content FROM chat_messages WHERE agent_id = $1
-       ORDER BY created_at DESC LIMIT 20`,
-      [body.agentId],
-    );
-    history = historyRes.rows.reverse();
+    try {
+      const historyRes = await query<{ role: string; content: string }>(
+        `SELECT role, content FROM chat_messages WHERE agent_id = $1
+         ORDER BY created_at DESC LIMIT 20`,
+        [body.agentId],
+      );
+      history = historyRes.rows.reverse();
+    } catch {
+      // DB unavailable — fall through to single-message context
+      history = [{ role: 'user', content: body.message.trim() }];
+    }
   } else {
     history = [{ role: 'user', content: body.message.trim() }];
   }
@@ -68,11 +88,14 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Chat API error' }, { status: 502 });
     }
 
-    // Broadcast chat:start via WS
+    // Import broadcast once — reused for chat:start, per-chunk, and chat:done
+    let broadcast: ((type: WsEventType, payload: unknown) => void) | null = null;
     try {
-      const { broadcast } = await import('@/lib/ws-server');
-      broadcast('chat:start', { agentId: body.agentId });
+      const wsServer = await import('@/lib/ws-server');
+      broadcast = wsServer.broadcast;
     } catch { /* WS not available */ }
+
+    broadcast?.('chat:start', { agentId: body.agentId });
 
     // Stream the response
     const encoder = new TextEncoder();
@@ -110,11 +133,7 @@ export async function POST(request: Request) {
                   fullContent += delta;
                   controller.enqueue(encoder.encode(`data: ${JSON.stringify({ delta })}\n\n`));
 
-                  // Broadcast chunk via WS
-                  try {
-                    const { broadcast } = await import('@/lib/ws-server');
-                    broadcast('chat:chunk', { agentId: body.agentId, delta });
-                  } catch { /* ignore */ }
+                  broadcast?.('chat:chunk', { agentId: body.agentId, delta });
                 }
               } catch { /* skip unparseable events */ }
             }
@@ -128,11 +147,7 @@ export async function POST(request: Request) {
             );
           }
 
-          // Broadcast chat:done
-          try {
-            const { broadcast } = await import('@/lib/ws-server');
-            broadcast('chat:done', { agentId: body.agentId });
-          } catch { /* ignore */ }
+          broadcast?.('chat:done', { agentId: body.agentId });
 
           controller.enqueue(encoder.encode(`data: ${JSON.stringify({ done: true })}\n\n`));
           controller.close();

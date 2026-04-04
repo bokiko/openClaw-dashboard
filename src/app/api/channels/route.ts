@@ -4,7 +4,7 @@ import path from 'path';
 
 export const dynamic = 'force-dynamic';
 
-const CONFIG_PATH = path.join(process.env.HOME || '/home/bokiko', '.openclaw/openclaw.json');
+const CONFIG_PATH = path.join(process.env.HOME || '', '.openclaw/openclaw.json');
 
 interface ChannelConfig {
   enabled?: boolean;
@@ -25,8 +25,10 @@ export async function GET() {
   try {
     const raw = fs.readFileSync(CONFIG_PATH, 'utf-8');
     const config = JSON.parse(raw);
-    const token = config?.gateway?.auth?.token || '';
-    const port = config?.gateway?.port || 18789;
+    const rawToken = config?.gateway?.auth?.token;
+    const token = typeof rawToken === 'string' ? rawToken : '';
+    const rawPort = config?.gateway?.port;
+    const port = (typeof rawPort === 'number' && rawPort >= 1 && rawPort <= 65535) ? rawPort : 18789;
     const channels: Record<string, ChannelConfig> = config?.channels || {};
 
     // Check gateway health
@@ -75,7 +77,8 @@ export async function GET() {
       channels: channelList,
       gateway: {
         status: gatewayOnline ? 'online' : 'offline',
-        ...gatewayInfo,
+        version: gatewayInfo.version,
+        uptime: gatewayInfo.uptime,
       },
       timestamp: now,
     });

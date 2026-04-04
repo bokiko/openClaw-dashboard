@@ -236,18 +236,20 @@ export function loadTasks(): Task[] {
   const now = Date.now();
   if (_tasksCache && (now - _tasksCachedAt) < TASKS_CACHE_TTL) return _tasksCache;
 
-  if (!existsSync(getTasksDir())) {
-    console.warn('Tasks directory not found:', getTasksDir());
+  const tasksDir = getTasksDir();
+
+  if (!existsSync(tasksDir)) {
+    console.warn('Tasks directory not found:', tasksDir);
     return [];
   }
 
-  const resolvedDir = resolve(getTasksDir());
-  const files = readdirSync(getTasksDir()).filter(f => f.endsWith('.json'));
+  const resolvedDir = resolve(tasksDir);
+  const files = readdirSync(tasksDir).filter(f => f.endsWith('.json'));
   const tasks: Task[] = [];
 
   for (const file of files) {
     try {
-      const fullPath = resolve(getTasksDir(), file);
+      const fullPath = resolve(resolvedDir, file);
       if (!fullPath.startsWith(resolvedDir + '/')) {
         console.warn('Skipping path traversal attempt:', file);
         continue;
@@ -293,7 +295,7 @@ export function loadTasks(): Task[] {
 }
 
 // ── Generate Feed from Tasks ───────────────────────────────────────────
-export function generateFeed(tasks: Task[]): FeedItem[] {
+export function generateFeed(tasks: Task[], agents?: Agent[]): FeedItem[] {
   const feed: FeedItem[] = [];
   const now = Date.now();
   
@@ -349,9 +351,9 @@ export function generateFeed(tasks: Task[]): FeedItem[] {
     } catch { /* ignore malformed feed file */ }
   }
 
-  // Add a status item
-  const agents = getAgents(tasks);
-  const workingAgents = agents.filter(a => a.status === 'working').length;
+  // Add a status item — use pre-fetched agents if provided to avoid redundant file I/O
+  const resolvedAgents = agents ?? getAgents(tasks);
+  const workingAgents = resolvedAgents.filter(a => a.status === 'working').length;
   feed.unshift({
     id: 'status-now',
     type: 'status',
@@ -372,14 +374,18 @@ function capitalize(s: string): string {
 
 // ── Get Stats ──────────────────────────────────────────────────────────
 export function getStats(tasks: Task[]) {
+  const counts = { done: 0, 'in-progress': 0, review: 0, assigned: 0, inbox: 0, waiting: 0 };
+  for (const t of tasks) {
+    if (t.status in counts) counts[t.status as keyof typeof counts]++;
+  }
   return {
     total: tasks.length,
-    done: tasks.filter(t => t.status === 'done').length,
-    inProgress: tasks.filter(t => t.status === 'in-progress').length,
-    review: tasks.filter(t => t.status === 'review').length,
-    assigned: tasks.filter(t => t.status === 'assigned').length,
-    inbox: tasks.filter(t => t.status === 'inbox').length,
-    waiting: tasks.filter(t => t.status === 'waiting').length,
+    done: counts['done'],
+    inProgress: counts['in-progress'],
+    review: counts['review'],
+    assigned: counts['assigned'],
+    inbox: counts['inbox'],
+    waiting: counts['waiting'],
   };
 }
 

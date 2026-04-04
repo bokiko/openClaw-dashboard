@@ -66,7 +66,8 @@ export async function getNotifications(opts?: { unreadOnly?: boolean; limit?: nu
   let idx = 1;
 
   if (opts?.unreadOnly) {
-    conditions.push(`read = FALSE`);
+    conditions.push(`read = $${idx++}`);
+    params.push(false);
   }
 
   const where = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';

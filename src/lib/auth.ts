@@ -12,7 +12,7 @@ function getSecret(): Uint8Array {
 }
 
 export function isAuthEnabled(): boolean {
-  return !!(process.env.DASHBOARD_PASSWORD || process.env.DASHBOARD_SECRET);
+  return !!(process.env.DASHBOARD_PASSWORD || process.env.DASHBOARD_SECRET || process.env.JWT_SECRET);
 }
 
 /**
@@ -81,6 +81,21 @@ export async function validateSession(token: string): Promise<{ valid: boolean; 
     const { payload } = await jwtVerify(token, getSecret());
     const sessionId = payload.sid as string;
     if (!sessionId) return { valid: false };
+
+    // When DB is available, confirm the session hasn't been revoked (e.g. via logout).
+    if (isDbAvailable()) {
+      try {
+        const { query } = await import('@/lib/db');
+        const res = await query<{ id: string }>(
+          `SELECT id FROM operator_sessions WHERE id = $1`,
+          [sessionId],
+        );
+        if (res.rows.length === 0) return { valid: false };
+      } catch {
+        // DB check failed — fall through and trust the JWT signature alone
+      }
+    }
+
     return { valid: true, sessionId };
   } catch {
     return { valid: false };

@@ -9,6 +9,10 @@ const WINDOW_MS = 15 * 60 * 1000; // 15 minutes
 function isRateLimited(ip: string): boolean {
   const now = Date.now();
   const attempts = (loginAttempts.get(ip) || []).filter(t => now - t < WINDOW_MS);
+  if (attempts.length === 0) {
+    loginAttempts.delete(ip);
+    return false;
+  }
   loginAttempts.set(ip, attempts);
   return attempts.length >= MAX_ATTEMPTS;
 }
