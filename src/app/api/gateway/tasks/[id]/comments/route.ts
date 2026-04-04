@@ -11,6 +11,9 @@ import { join } from 'path';
 
 const COMMENTS_FILE = join(process.cwd(), '.gateway-comments.json');
 
+// Serializes concurrent writes to prevent race conditions
+let writeLock = Promise.resolve();
+
 interface StoredComment {
   id: number;
   taskId: string;
@@ -54,23 +57,28 @@ export async function POST(
     return NextResponse.json({ error: 'Content required' }, { status: 400 });
   }
 
-  const store = await loadStore();
-  const taskComments = store[id] || [];
-  const nextId = taskComments.length > 0
-    ? Math.max(...taskComments.map(c => c.id)) + 1
-    : 1;
+  let savedComment: StoredComment | undefined;
+  writeLock = writeLock.then(async () => {
+    const store = await loadStore();
+    const taskComments = store[id] || [];
+    const nextId = taskComments.length > 0
+      ? Math.max(...taskComments.map(c => c.id)) + 1
+      : 1;
 
-  const comment: StoredComment = {
-    id: nextId,
-    taskId: id,
-    author: body.author || 'operator',
-    content,
-    createdAt: Date.now(),
-  };
+    const comment: StoredComment = {
+      id: nextId,
+      taskId: id,
+      author: body.author || 'operator',
+      content,
+      createdAt: Date.now(),
+    };
 
-  taskComments.push(comment);
-  store[id] = taskComments;
-  await saveStore(store);
+    taskComments.push(comment);
+    store[id] = taskComments;
+    await saveStore(store);
+    savedComment = comment;
+  });
+  await writeLock;
 
-  return NextResponse.json({ comment }, { status: 201 });
+  return NextResponse.json({ comment: savedComment }, { status: 201 });
 }

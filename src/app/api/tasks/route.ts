@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { isDbAvailable } from '@/lib/db';
+import { isDbAvailable, query } from '@/lib/db';
 import { loadTasksFromDb, createTask } from '@/lib/db-data';
 import type { TaskStatus, CreateTaskInput } from '@/types';
 
@@ -17,13 +17,28 @@ export async function GET(request: Request) {
   const offset = parseInt(url.searchParams.get('offset') || '0', 10);
 
   try {
-    const tasks = await loadTasksFromDb({
-      status: status ?? undefined,
-      assignee: assignee ?? undefined,
-      limit: Math.min(limit, 500),
-      offset,
-    });
-    return NextResponse.json({ tasks, total: tasks.length });
+    const conditions: string[] = ['deleted_at IS NULL'];
+    const params: unknown[] = [];
+    let idx = 1;
+    if (status) { conditions.push(`status = $${idx++}`); params.push(status); }
+    if (assignee) { conditions.push(`assignee_id = $${idx++}`); params.push(assignee); }
+    const where = conditions.join(' AND ');
+
+    const [tasks, countResult] = await Promise.all([
+      loadTasksFromDb({
+        status: status ?? undefined,
+        assignee: assignee ?? undefined,
+        limit: Math.min(limit, 500),
+        offset,
+      }),
+      query<{ count: string }>(
+        `SELECT COUNT(*)::text as count FROM dashboard_tasks WHERE ${where}`,
+        params,
+      ),
+    ]);
+
+    const total = parseInt(countResult.rows[0].count, 10);
+    return NextResponse.json({ tasks, total });
   } catch (error) {
     console.error('Error loading tasks:', error);
     return NextResponse.json({ error: 'Failed to load tasks' }, { status: 500 });

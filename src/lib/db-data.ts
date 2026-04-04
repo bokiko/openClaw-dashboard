@@ -308,39 +308,35 @@ export async function getStatsFromDb(): Promise<{
 
 export async function getTokenStatsFromDb(): Promise<TokenStats | null> {
   // Use the existing token_usage table from 001 migration
-  const result = await query<{
-    total_input: string; total_output: string;
-  }>(`SELECT COALESCE(SUM(input_tokens), 0)::text as total_input,
-             COALESCE(SUM(output_tokens), 0)::text as total_output
-      FROM token_usage`);
+  const [result, byModelRes, byDateRes, byAgentRes] = await Promise.all([
+    query<{ total_input: string; total_output: string }>(
+      `SELECT COALESCE(SUM(input_tokens), 0)::text as total_input,
+              COALESCE(SUM(output_tokens), 0)::text as total_output
+       FROM token_usage`,
+    ),
+    query<{ model: string; input: string; output: string }>(
+      `SELECT COALESCE(model, 'unknown') as model,
+              SUM(input_tokens)::text as input,
+              SUM(output_tokens)::text as output
+       FROM token_usage GROUP BY model`,
+    ),
+    query<{ date: string; input: string; output: string }>(
+      `SELECT created_at::date::text as date,
+              SUM(input_tokens)::text as input,
+              SUM(output_tokens)::text as output
+       FROM token_usage GROUP BY created_at::date ORDER BY date`,
+    ),
+    query<{ agent: string; input: string; output: string }>(
+      `SELECT COALESCE(session_id, 'unknown') as agent,
+              SUM(input_tokens)::text as input,
+              SUM(output_tokens)::text as output
+       FROM token_usage GROUP BY session_id`,
+    ),
+  ]);
 
   const totalInput = parseInt(result.rows[0].total_input, 10);
   const totalOutput = parseInt(result.rows[0].total_output, 10);
   if (totalInput === 0 && totalOutput === 0) return null;
-
-  // By model
-  const byModelRes = await query<{ model: string; input: string; output: string }>(
-    `SELECT COALESCE(model, 'unknown') as model,
-            SUM(input_tokens)::text as input,
-            SUM(output_tokens)::text as output
-     FROM token_usage GROUP BY model`,
-  );
-
-  // By date
-  const byDateRes = await query<{ date: string; input: string; output: string }>(
-    `SELECT created_at::date::text as date,
-            SUM(input_tokens)::text as input,
-            SUM(output_tokens)::text as output
-     FROM token_usage GROUP BY created_at::date ORDER BY date`,
-  );
-
-  // By session (as proxy for agent)
-  const byAgentRes = await query<{ agent: string; input: string; output: string }>(
-    `SELECT COALESCE(session_id, 'unknown') as agent,
-            SUM(input_tokens)::text as input,
-            SUM(output_tokens)::text as output
-     FROM token_usage GROUP BY session_id`,
-  );
 
   const tokensByAgent: Record<string, { input: number; output: number }> = {};
   for (const row of byAgentRes.rows) {

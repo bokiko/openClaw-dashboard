@@ -372,14 +372,18 @@ function capitalize(s: string): string {
 
 // ── Get Stats ──────────────────────────────────────────────────────────
 export function getStats(tasks: Task[]) {
+  const counts = { done: 0, 'in-progress': 0, review: 0, assigned: 0, inbox: 0, waiting: 0 };
+  for (const t of tasks) {
+    if (t.status in counts) counts[t.status as keyof typeof counts]++;
+  }
   return {
     total: tasks.length,
-    done: tasks.filter(t => t.status === 'done').length,
-    inProgress: tasks.filter(t => t.status === 'in-progress').length,
-    review: tasks.filter(t => t.status === 'review').length,
-    assigned: tasks.filter(t => t.status === 'assigned').length,
-    inbox: tasks.filter(t => t.status === 'inbox').length,
-    waiting: tasks.filter(t => t.status === 'waiting').length,
+    done: counts['done'],
+    inProgress: counts['in-progress'],
+    review: counts['review'],
+    assigned: counts['assigned'],
+    inbox: counts['inbox'],
+    waiting: counts['waiting'],
   };
 }
 
