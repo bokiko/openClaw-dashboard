@@ -28,8 +28,11 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Auth not configured' }, { status: 400 });
   }
 
-  const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim()
-    || request.headers.get('x-real-ip')
+  // Prefer x-real-ip (set by trusted proxy and not spoofable by clients) over
+  // x-forwarded-for which any client can forge. Requires a reverse proxy that
+  // strips/overwrites x-forwarded-for before forwarding to this server.
+  const ip = request.headers.get('x-real-ip')
+    || request.headers.get('x-forwarded-for')?.split(',')[0]?.trim()
     || 'unknown';
 
   if (isRateLimited(ip)) {

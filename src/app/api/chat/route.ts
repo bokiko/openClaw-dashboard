@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { isDbAvailable, query } from '@/lib/db';
+import type { WsEventType } from '@/types';
 
 export const dynamic = 'force-dynamic';
 
@@ -87,11 +88,15 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Chat API error' }, { status: 502 });
     }
 
-    // Broadcast chat:start via WS
+    // Import broadcast once — reused for chat:start, per-chunk, and chat:done
+    // to avoid repeated dynamic import promise creation on the streaming hot path.
+    let broadcast: ((type: WsEventType, payload: unknown) => void) | null = null;
     try {
-      const { broadcast } = await import('@/lib/ws-server');
-      broadcast('chat:start', { agentId: body.agentId });
+      const wsServer = await import('@/lib/ws-server');
+      broadcast = wsServer.broadcast;
     } catch { /* WS not available */ }
+
+    broadcast?.('chat:start', { agentId: body.agentId });
 
     // Stream the response
     const encoder = new TextEncoder();
@@ -128,12 +133,7 @@ export async function POST(request: Request) {
                   const delta = event.delta.text;
                   fullContent += delta;
                   controller.enqueue(encoder.encode(`data: ${JSON.stringify({ delta })}\n\n`));
-
-                  // Broadcast chunk via WS
-                  try {
-                    const { broadcast } = await import('@/lib/ws-server');
-                    broadcast('chat:chunk', { agentId: body.agentId, delta });
-                  } catch { /* ignore */ }
+                  broadcast?.('chat:chunk', { agentId: body.agentId, delta });
                 }
               } catch { /* skip unparseable events */ }
             }
@@ -147,11 +147,7 @@ export async function POST(request: Request) {
             );
           }
 
-          // Broadcast chat:done
-          try {
-            const { broadcast } = await import('@/lib/ws-server');
-            broadcast('chat:done', { agentId: body.agentId });
-          } catch { /* ignore */ }
+          broadcast?.('chat:done', { agentId: body.agentId });
 
           controller.enqueue(encoder.encode(`data: ${JSON.stringify({ done: true })}\n\n`));
           controller.close();
