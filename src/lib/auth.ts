@@ -12,7 +12,7 @@ function getSecret(): Uint8Array {
 }
 
 export function isAuthEnabled(): boolean {
-  return !!(process.env.DASHBOARD_PASSWORD || process.env.DASHBOARD_SECRET);
+  return !!(process.env.DASHBOARD_PASSWORD || process.env.DASHBOARD_SECRET || process.env.JWT_SECRET);
 }
 
 /**
