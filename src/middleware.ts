@@ -7,8 +7,13 @@ import { jwtVerify } from 'jose';
 // page props and potentially sensitive data.
 const PUBLIC_PATHS = ['/login', '/favicon.ico', '/api/health', '/api/auth/login', '/api/auth/logout'];
 
+// ARCH-004: This mirrors getSecret() in src/lib/auth.ts.
+// Deduplication via import is intentionally avoided: Next.js middleware runs on
+// the Edge runtime by default, and auth.ts has a top-level bcryptjs import that
+// is not Edge-compatible.  Keep the two in sync manually — the fallback chain is
+// JWT_SECRET → DASHBOARD_SECRET (DASHBOARD_PASSWORD is not used for JWT signing
+// in the middleware path; full session validation happens in API route handlers).
 function getSecret(): Uint8Array | null {
-  // Mirror auth.ts: JWT_SECRET takes precedence, fall back to DASHBOARD_SECRET
   const secret = process.env.JWT_SECRET || process.env.DASHBOARD_SECRET;
   if (!secret) return null;
   return new TextEncoder().encode(secret);

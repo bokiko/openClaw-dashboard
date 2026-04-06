@@ -232,7 +232,7 @@ describe('generateFeed', () => {
     });
 
     const tasks = await loadTasks();
-    const feed = generateFeed(tasks);
+    const feed = await generateFeed(tasks);
 
     // Should have status item + 3 task items = 4 minimum
     expect(feed.length).toBeGreaterThanOrEqual(4);
@@ -263,7 +263,7 @@ describe('generateFeed', () => {
     );
 
     const tasks = await loadTasks();
-    const feed = generateFeed(tasks);
+    const feed = await generateFeed(tasks);
 
     const memoryItem = feed.find(f => f.id === 'ext-1');
     expect(memoryItem).toBeDefined();
@@ -282,7 +282,7 @@ describe('generateFeed', () => {
 
     _resetTasksCache();
     const tasks = await loadTasks();
-    const feed = generateFeed(tasks);
+    const feed = await generateFeed(tasks);
     expect(feed.length).toBeLessThanOrEqual(15);
   });
 
@@ -290,7 +290,7 @@ describe('generateFeed', () => {
     writeTask(tmpDir, 'task.json', { title: 'T', status: 'inbox' });
 
     const tasks = await loadTasks();
-    const feed = generateFeed(tasks);
+    const feed = await generateFeed(tasks);
 
     const statusItem = feed.find(f => f.id === 'status-now');
     expect(statusItem).toBeDefined();

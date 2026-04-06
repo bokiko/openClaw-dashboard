@@ -23,7 +23,7 @@ const GLOBAL_MAX = MAX_ATTEMPTS * 3; // 15 total attempts per window across all 
 setInterval(() => {
   const now = Date.now();
   for (const [ip, timestamps] of loginAttempts) {
-    if (timestamps.length === 0 || now - Math.max(...timestamps) >= WINDOW_MS) {
+    if (timestamps.length === 0 || now - timestamps[timestamps.length - 1] >= WINDOW_MS) {
       loginAttempts.delete(ip);
     }
   }

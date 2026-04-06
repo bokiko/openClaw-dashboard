@@ -23,7 +23,13 @@ export function setupWebSocket(server: HttpServer): WebSocketServer {
       return;
     }
 
-    // Extract token from query param for auth verification
+    // Extract token from query param for auth verification.
+    // SEC-008: The browser WebSocket API does not support custom headers during
+    // the upgrade handshake, so the token must be passed as a URL query parameter.
+    // This means it appears in HTTP access logs.  Exposure is mitigated by the
+    // 30-second TTL on WS tokens (see createWsToken in auth.ts) — a leaked token
+    // is useless after half a minute.  Use-once ticket semantics would eliminate
+    // residual risk but add complexity; the TTL is considered adequate here.
     const token = url.searchParams.get('token');
 
     wss!.handleUpgrade(req, socket, head, (ws) => {

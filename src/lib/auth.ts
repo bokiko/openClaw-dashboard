@@ -20,8 +20,10 @@ if (
 }
 
 function getSecret(): Uint8Array {
-  // JWT_SECRET takes precedence; fall back to DASHBOARD_SECRET for backwards compat
-  const secret = process.env.JWT_SECRET || process.env.DASHBOARD_SECRET;
+  // JWT_SECRET takes precedence; fall back to DASHBOARD_SECRET for backwards compat;
+  // fall back to DASHBOARD_PASSWORD so that a user who only sets DASHBOARD_PASSWORD
+  // can still create JWT sessions (BUG-004: previously threw causing login 500).
+  const secret = process.env.JWT_SECRET || process.env.DASHBOARD_SECRET || process.env.DASHBOARD_PASSWORD;
   if (!secret) throw new Error('JWT_SECRET (or DASHBOARD_SECRET) is not set');
   return new TextEncoder().encode(secret);
 }

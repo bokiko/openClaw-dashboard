@@ -266,7 +266,7 @@ export async function loadTasks(): Promise<Task[]> {
 }
 
 // ── Generate Feed from Tasks ───────────────────────────────────────────
-export function generateFeed(tasks: Task[], agents?: Agent[]): FeedItem[] {
+export async function generateFeed(tasks: Task[], agents?: Agent[]): Promise<FeedItem[]> {
   const feed: FeedItem[] = [];
   const now = Date.now();
   
@@ -304,23 +304,22 @@ export function generateFeed(tasks: Task[], agents?: Agent[]): FeedItem[] {
 
   // Merge feed items from bridge script (file claims, memory entries)
   const feedPath = join(getTasksDir(), 'feed-items.json');
-  if (existsSync(feedPath)) {
-    try {
-      const rawFeed = JSON.parse(readFileSync(feedPath, 'utf-8')) as Array<{
-        id: string; type: string; title: string; agentId?: string; timestamp: string;
-      }>;
-      for (const item of rawFeed.slice(0, 10)) {
-        feed.push({
-          id: item.id,
-          type: item.type === 'memory' ? 'decision' : 'comment',
-          severity: item.type === 'memory' ? 'info' : 'info',
-          title: item.title,
-          agentId: item.agentId,
-          timestamp: new Date(item.timestamp).getTime(),
-        });
-      }
-    } catch { /* ignore malformed feed file */ }
-  }
+  try {
+    const rawContent = await readFile(feedPath, 'utf-8');
+    const rawFeed = JSON.parse(rawContent) as Array<{
+      id: string; type: string; title: string; agentId?: string; timestamp: string;
+    }>;
+    for (const item of rawFeed.slice(0, 10)) {
+      feed.push({
+        id: item.id,
+        type: item.type === 'memory' ? 'decision' : 'comment',
+        severity: item.type === 'memory' ? 'info' : 'info',
+        title: item.title,
+        agentId: item.agentId,
+        timestamp: new Date(item.timestamp).getTime(),
+      });
+    }
+  } catch { /* file absent or malformed — ignore */ }
 
   // Add a status item — use pre-fetched agents if provided to avoid redundant file I/O
   const resolvedAgents = agents ?? getAgents(tasks);

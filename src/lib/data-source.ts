@@ -55,11 +55,11 @@ export async function getAgentsUnified(tasks?: Task[]): Promise<Agent[]> {
   return getAgents(tasks);
 }
 
-export async function generateFeedUnified(tasks?: Task[]): Promise<FeedItem[]> {
+export async function generateFeedUnified(tasks?: Task[], limit?: number): Promise<FeedItem[]> {
   if (getDataSource() === 'db') {
     try {
       const { generateFeedFromDb } = await getDbData();
-      return await generateFeedFromDb();
+      return await generateFeedFromDb(limit);
     } catch {
       // DB unavailable — degrade to file mode
     }
