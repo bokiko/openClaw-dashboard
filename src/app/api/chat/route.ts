@@ -20,6 +20,11 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'agentId and message are required' }, { status: 400 });
   }
 
+  // Prevent prompt injection — only allow safe agent ID characters
+  if (!/^[a-zA-Z0-9_-]{1,50}$/.test(body.agentId)) {
+    return NextResponse.json({ error: 'Invalid agentId format' }, { status: 400 });
+  }
+
   // Store user message in DB
   if (isDbAvailable()) {
     await query(

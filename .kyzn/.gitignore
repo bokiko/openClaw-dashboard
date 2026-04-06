@@ -1,3 +1,7 @@
 # kyzn — gitignored local data
 history/
 reports/
+local.yaml
+kyzn-report.md
+.improve.lock/
+repo-profile.md

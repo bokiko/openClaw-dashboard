@@ -12,7 +12,12 @@ function getSecret(): Uint8Array {
 }
 
 export function isAuthEnabled(): boolean {
-  return !!(process.env.DASHBOARD_PASSWORD || process.env.DASHBOARD_SECRET);
+  const hasPassword = !!(process.env.DASHBOARD_PASSWORD || process.env.DASHBOARD_SECRET);
+  const hasJwtSecret = !!(process.env.JWT_SECRET || process.env.DASHBOARD_SECRET);
+  if (hasPassword && !hasJwtSecret) {
+    console.warn('[auth] DASHBOARD_PASSWORD is set but no JWT signing secret (JWT_SECRET or DASHBOARD_SECRET) exists — auth is disabled');
+  }
+  return hasPassword && hasJwtSecret;
 }
 
 /**
