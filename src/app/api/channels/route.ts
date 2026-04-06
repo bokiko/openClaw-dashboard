@@ -4,7 +4,8 @@ import path from 'path';
 
 export const dynamic = 'force-dynamic';
 
-const CONFIG_PATH = path.join(process.env.HOME || '/home/bokiko', '.openclaw/openclaw.json');
+const CONFIG_PATH = process.env.OPENCLAW_CONFIG_PATH ||
+  path.join(process.env.HOME || '/home/bokiko', '.openclaw/openclaw.json');
 
 interface ChannelConfig {
   enabled?: boolean;

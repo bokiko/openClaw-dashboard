@@ -63,12 +63,12 @@ export function getClientSettings(): ClientSettings {
 }
 
 // ── Color Validation ──────────────────────────────────────────────────
-function sanitizeColor(color: string): string {
+export function sanitizeColor(color: string): string {
   return /^#[0-9a-fA-F]{6}$/.test(color) ? color : '#697177';
 }
 
 // ── Agent Color Palette ──────────────────────────────────────────────
-const AGENT_PALETTE = [
+export const AGENT_PALETTE = [
   '#46a758', '#3e63dd', '#8e4ec6', '#ffb224', '#e879a4',
   '#00a2c7', '#e54d2e', '#f76b15', '#697177', '#30a46c',
 ];
@@ -236,18 +236,19 @@ export function loadTasks(): Task[] {
   const now = Date.now();
   if (_tasksCache && (now - _tasksCachedAt) < TASKS_CACHE_TTL) return _tasksCache;
 
-  if (!existsSync(getTasksDir())) {
-    console.warn('Tasks directory not found:', getTasksDir());
+  const tasksDir = getTasksDir();
+  if (!existsSync(tasksDir)) {
+    console.warn('Tasks directory not found:', tasksDir);
     return [];
   }
 
-  const resolvedDir = resolve(getTasksDir());
-  const files = readdirSync(getTasksDir()).filter(f => f.endsWith('.json'));
+  const resolvedDir = resolve(tasksDir);
+  const files = readdirSync(tasksDir).filter(f => f.endsWith('.json'));
   const tasks: Task[] = [];
 
   for (const file of files) {
     try {
-      const fullPath = resolve(getTasksDir(), file);
+      const fullPath = resolve(tasksDir, file);
       if (!fullPath.startsWith(resolvedDir + '/')) {
         console.warn('Skipping path traversal attempt:', file);
         continue;
@@ -293,7 +294,7 @@ export function loadTasks(): Task[] {
 }
 
 // ── Generate Feed from Tasks ───────────────────────────────────────────
-export function generateFeed(tasks: Task[]): FeedItem[] {
+export function generateFeed(tasks: Task[], agents?: Agent[]): FeedItem[] {
   const feed: FeedItem[] = [];
   const now = Date.now();
   
@@ -349,9 +350,9 @@ export function generateFeed(tasks: Task[]): FeedItem[] {
     } catch { /* ignore malformed feed file */ }
   }
 
-  // Add a status item
-  const agents = getAgents(tasks);
-  const workingAgents = agents.filter(a => a.status === 'working').length;
+  // Add a status item — use caller-supplied agents to avoid redundant disk reads
+  const resolvedAgents = agents ?? getAgents(tasks);
+  const workingAgents = resolvedAgents.filter(a => a.status === 'working').length;
   feed.unshift({
     id: 'status-now',
     type: 'status',
@@ -372,15 +373,18 @@ function capitalize(s: string): string {
 
 // ── Get Stats ──────────────────────────────────────────────────────────
 export function getStats(tasks: Task[]) {
-  return {
-    total: tasks.length,
-    done: tasks.filter(t => t.status === 'done').length,
-    inProgress: tasks.filter(t => t.status === 'in-progress').length,
-    review: tasks.filter(t => t.status === 'review').length,
-    assigned: tasks.filter(t => t.status === 'assigned').length,
-    inbox: tasks.filter(t => t.status === 'inbox').length,
-    waiting: tasks.filter(t => t.status === 'waiting').length,
-  };
+  let done = 0, inProgress = 0, review = 0, assigned = 0, inbox = 0, waiting = 0;
+  for (const t of tasks) {
+    switch (t.status) {
+      case 'done':        done++;        break;
+      case 'in-progress': inProgress++;  break;
+      case 'review':      review++;      break;
+      case 'assigned':    assigned++;    break;
+      case 'inbox':       inbox++;       break;
+      case 'waiting':     waiting++;     break;
+    }
+  }
+  return { total: tasks.length, done, inProgress, review, assigned, inbox, waiting };
 }
 
 // ── Get Token Stats ──────────────────────────────────────────────────

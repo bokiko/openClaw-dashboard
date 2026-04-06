@@ -1,10 +1,23 @@
 import { NextResponse } from 'next/server';
-import { isAuthEnabled, createWsToken } from '@/lib/auth';
+import { isAuthEnabled, createWsToken, validateSession } from '@/lib/auth';
+import { cookies } from 'next/headers';
 
 export async function GET() {
   // If auth is not enabled, return a simple flag
   if (!isAuthEnabled()) {
     return NextResponse.json({ token: null, wsUrl: getWsUrl() });
+  }
+
+  // Defense-in-depth: validate session cookie even though middleware already checks.
+  // Protects against middleware bypass (e.g., custom server, static export).
+  const cookieStore = await cookies();
+  const sessionToken = cookieStore.get('oc_session')?.value;
+  if (!sessionToken) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+  const { valid } = await validateSession(sessionToken);
+  if (!valid) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
   const token = await createWsToken();

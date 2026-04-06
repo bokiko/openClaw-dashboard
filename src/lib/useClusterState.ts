@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback, useReducer } from 'react';
+import { useState, useEffect, useCallback, useReducer, useMemo } from 'react';
 import type { Agent, Task, FeedItem, DashboardData, ClusterTask, ClusterWorker, SpawnedSession, GatewayCronJob, GatewayCronRun } from '@/types';
 import { clusterTaskToTask, clusterWorkerToAgent, activityToFeedItem } from '@/types';
 import type { Notification } from '@/types';
@@ -237,9 +237,15 @@ export function useClusterState() {
     } catch { /* optimistic */ }
   }, []);
 
-  // Convert to dashboard format
-  const tasks: Task[] = state.tasks.map(ct => clusterTaskToTask(ct, state.workers));
-  const agents: Agent[] = state.workers.map(clusterWorkerToAgent);
+  // Convert to dashboard format — memoized to avoid downstream re-renders on every call
+  const tasks = useMemo(
+    () => state.tasks.map(ct => clusterTaskToTask(ct, state.workers)),
+    [state.tasks, state.workers],
+  );
+  const agents = useMemo(
+    () => state.workers.map(clusterWorkerToAgent),
+    [state.workers],
+  );
 
   return {
     agents,

@@ -11,7 +11,7 @@ export async function GET(request: Request) {
 
   const url = new URL(request.url);
   const unreadOnly = url.searchParams.get('unread') === 'true';
-  const limit = parseInt(url.searchParams.get('limit') || '50', 10);
+  const limit = Math.min(Math.max(1, parseInt(url.searchParams.get('limit') || '50', 10) || 50), 200);
 
   try {
     const notifications = await getNotifications({ unreadOnly, limit });

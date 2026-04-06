@@ -10,7 +10,8 @@ export function getDataSource(): DataSource {
 export async function loadTasksUnified(): Promise<Task[]> {
   if (getDataSource() === 'db') {
     const { loadTasksFromDb } = await import('@/lib/db-data');
-    return loadTasksFromDb();
+    const { tasks } = await loadTasksFromDb();
+    return tasks;
   }
   const { loadTasks } = await import('@/lib/data');
   return loadTasks();

@@ -14,8 +14,8 @@ export async function GET(
   }
 
   const url = new URL(request.url);
-  const limit = parseInt(url.searchParams.get('limit') || '50', 10);
-  const offset = parseInt(url.searchParams.get('offset') || '0', 10);
+  const limit = Math.min(Math.max(1, parseInt(url.searchParams.get('limit') || '50', 10) || 50), 100);
+  const offset = Math.max(0, parseInt(url.searchParams.get('offset') || '0', 10) || 0);
 
   try {
     const result = await query<{

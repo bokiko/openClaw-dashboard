@@ -1,4 +1,5 @@
 import { query, transaction } from '@/lib/db';
+import { AGENT_PALETTE, sanitizeColor } from '@/lib/data';
 import type {
   Agent, Task, FeedItem, TaskStatus, Priority, TokenStats,
   TaskDetail, ChecklistItem, TaskComment, TaskDeliverable,
@@ -12,7 +13,7 @@ export async function loadTasksFromDb(opts?: {
   assignee?: string;
   limit?: number;
   offset?: number;
-}): Promise<Task[]> {
+}): Promise<{ tasks: Task[]; total: number }> {
   const conditions: string[] = ['deleted_at IS NULL'];
   const params: unknown[] = [];
   let idx = 1;
@@ -34,10 +35,11 @@ export async function loadTasksFromDb(opts?: {
     id: string; title: string; description: string; status: string;
     priority: number; assignee_id: string | null; tags: string[];
     parent_id: string | null; sort_order: number;
-    created_at: Date; updated_at: Date;
+    created_at: Date; updated_at: Date; total_count: string;
   }>(
     `SELECT id, title, description, status, priority, assignee_id, tags,
-            parent_id, sort_order, created_at, updated_at
+            parent_id, sort_order, created_at, updated_at,
+            COUNT(*) OVER() as total_count
      FROM dashboard_tasks
      WHERE ${where}
      ORDER BY created_at DESC
@@ -45,7 +47,8 @@ export async function loadTasksFromDb(opts?: {
     [...params, limit, offset],
   );
 
-  return result.rows.map(rowToTask);
+  const total = result.rows.length > 0 ? parseInt(result.rows[0].total_count, 10) : 0;
+  return { tasks: result.rows.map(rowToTask), total };
 }
 
 function rowToTask(r: {
@@ -213,10 +216,6 @@ export async function getAgentsFromDb(tasks?: Task[]): Promise<Agent[]> {
   return discoverAgentsFromTasksDb(tasks ?? []);
 }
 
-const AGENT_PALETTE = [
-  '#46a758', '#3e63dd', '#8e4ec6', '#ffb224', '#e879a4',
-  '#00a2c7', '#e54d2e', '#f76b15', '#697177', '#30a46c',
-];
 
 function discoverAgentsFromTasksDb(tasks: Task[]): Agent[] {
   const ids = new Set<string>();
@@ -235,7 +234,7 @@ function discoverAgentsFromTasksDb(tasks: Task[]): Agent[] {
       id,
       name: id.charAt(0).toUpperCase() + id.slice(1),
       letter: id.charAt(0).toUpperCase(),
-      color: AGENT_PALETTE[i % AGENT_PALETTE.length],
+      color: sanitizeColor(AGENT_PALETTE[i % AGENT_PALETTE.length]),
       role: 'Agent',
       status: inProgressIds.has(id) ? 'working' : 'idle',
     });
@@ -307,40 +306,36 @@ export async function getStatsFromDb(): Promise<{
 }
 
 export async function getTokenStatsFromDb(): Promise<TokenStats | null> {
-  // Use the existing token_usage table from 001 migration
-  const result = await query<{
-    total_input: string; total_output: string;
-  }>(`SELECT COALESCE(SUM(input_tokens), 0)::text as total_input,
-             COALESCE(SUM(output_tokens), 0)::text as total_output
-      FROM token_usage`);
+  // Run the 3 GROUP BY queries in parallel; derive the total from results.
+  const [byModelRes, byDateRes, byAgentRes] = await Promise.all([
+    query<{ model: string; input: string; output: string }>(
+      `SELECT COALESCE(model, 'unknown') as model,
+              SUM(input_tokens)::text as input,
+              SUM(output_tokens)::text as output
+       FROM token_usage GROUP BY model`,
+    ),
+    query<{ date: string; input: string; output: string }>(
+      `SELECT created_at::date::text as date,
+              SUM(input_tokens)::text as input,
+              SUM(output_tokens)::text as output
+       FROM token_usage GROUP BY created_at::date ORDER BY date`,
+    ),
+    query<{ agent: string; input: string; output: string }>(
+      `SELECT COALESCE(session_id, 'unknown') as agent,
+              SUM(input_tokens)::text as input,
+              SUM(output_tokens)::text as output
+       FROM token_usage GROUP BY session_id`,
+    ),
+  ]);
 
-  const totalInput = parseInt(result.rows[0].total_input, 10);
-  const totalOutput = parseInt(result.rows[0].total_output, 10);
+  // Derive totals from the byModel results (avoids a separate COUNT query)
+  let totalInput = 0;
+  let totalOutput = 0;
+  for (const row of byModelRes.rows) {
+    totalInput += parseInt(row.input, 10);
+    totalOutput += parseInt(row.output, 10);
+  }
   if (totalInput === 0 && totalOutput === 0) return null;
-
-  // By model
-  const byModelRes = await query<{ model: string; input: string; output: string }>(
-    `SELECT COALESCE(model, 'unknown') as model,
-            SUM(input_tokens)::text as input,
-            SUM(output_tokens)::text as output
-     FROM token_usage GROUP BY model`,
-  );
-
-  // By date
-  const byDateRes = await query<{ date: string; input: string; output: string }>(
-    `SELECT created_at::date::text as date,
-            SUM(input_tokens)::text as input,
-            SUM(output_tokens)::text as output
-     FROM token_usage GROUP BY created_at::date ORDER BY date`,
-  );
-
-  // By session (as proxy for agent)
-  const byAgentRes = await query<{ agent: string; input: string; output: string }>(
-    `SELECT COALESCE(session_id, 'unknown') as agent,
-            SUM(input_tokens)::text as input,
-            SUM(output_tokens)::text as output
-     FROM token_usage GROUP BY session_id`,
-  );
 
   const tokensByAgent: Record<string, { input: number; output: number }> = {};
   for (const row of byAgentRes.rows) {
@@ -372,19 +367,22 @@ export async function addChecklistItem(taskId: string, label: string, sortOrder 
   return { id: r.id, taskId: r.task_id, label: r.label, checked: r.checked, sortOrder: r.sort_order };
 }
 
-export async function updateChecklistItem(id: number, updates: { label?: string; checked?: boolean }): Promise<boolean> {
+export async function updateChecklistItem(id: number, taskId: string, updates: { label?: string; checked?: boolean }): Promise<boolean> {
   const sets: string[] = [];
   const params: unknown[] = [];
   let idx = 1;
   if (updates.label !== undefined) { sets.push(`label = $${idx++}`); params.push(updates.label); }
   if (updates.checked !== undefined) { sets.push(`checked = $${idx++}`); params.push(updates.checked); }
   if (sets.length === 0) return false;
-  const result = await query(`UPDATE task_checklist SET ${sets.join(', ')} WHERE id = $${idx}`, [...params, id]);
+  const result = await query(
+    `UPDATE task_checklist SET ${sets.join(', ')} WHERE id = $${idx} AND task_id = $${idx + 1}`,
+    [...params, id, taskId],
+  );
   return (result.rowCount ?? 0) > 0;
 }
 
-export async function deleteChecklistItem(id: number): Promise<boolean> {
-  const result = await query(`DELETE FROM task_checklist WHERE id = $1`, [id]);
+export async function deleteChecklistItem(id: number, taskId: string): Promise<boolean> {
+  const result = await query(`DELETE FROM task_checklist WHERE id = $1 AND task_id = $2`, [id, taskId]);
   return (result.rowCount ?? 0) > 0;
 }
 

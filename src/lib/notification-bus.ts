@@ -77,7 +77,7 @@ export async function getNotifications(opts?: { unreadOnly?: boolean; limit?: nu
     severity: string; entity_type: string | null; entity_id: string | null;
     read: boolean; created_at: Date;
   }>(
-    `SELECT * FROM notifications ${where} ORDER BY created_at DESC LIMIT $${idx}`,
+    `SELECT * FROM notifications ${where} ORDER BY created_at DESC LIMIT $${idx++}`,
     [...params, limit],
   );
 

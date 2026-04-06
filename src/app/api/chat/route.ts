@@ -25,12 +25,16 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Invalid agentId format' }, { status: 400 });
   }
 
-  // Store user message in DB
+  // Store user message in DB (best-effort — chat works even if DB is unavailable)
   if (isDbAvailable()) {
-    await query(
-      `INSERT INTO chat_messages (agent_id, role, content) VALUES ($1, 'user', $2)`,
-      [body.agentId, body.message.trim()],
-    );
+    try {
+      await query(
+        `INSERT INTO chat_messages (agent_id, role, content) VALUES ($1, 'user', $2)`,
+        [body.agentId, body.message.trim()],
+      );
+    } catch (err) {
+      console.error('Failed to store user message:', err instanceof Error ? err.message : err);
+    }
   }
 
   // Build message history for context

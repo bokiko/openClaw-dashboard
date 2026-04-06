@@ -338,12 +338,12 @@ export function buildDashboardData(
     tasksByLane[t.lane].push(t);
   }
 
-  // Stats
-  const inProgress = tasks.filter(t => t.lane === 'in_progress').length;
-  const assigned = tasks.filter(t => t.lane === 'assigned').length;
-  const review = tasks.filter(t => t.lane === 'review').length;
-  const inbox = tasks.filter(t => t.lane === 'inbox').length;
-  const done = tasks.filter(t => t.lane === 'done').length;
+  // Stats — derived from already-built tasksByLane to avoid re-scanning
+  const inProgress = (tasksByLane['in_progress'] || []).length;
+  const assigned = (tasksByLane['assigned'] || []).length;
+  const review = (tasksByLane['review'] || []).length;
+  const inbox = (tasksByLane['inbox'] || []).length;
+  const done = (tasksByLane['done'] || []).length;
 
   return {
     tasks,

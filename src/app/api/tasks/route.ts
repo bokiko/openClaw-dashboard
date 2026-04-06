@@ -13,17 +13,17 @@ export async function GET(request: Request) {
   const url = new URL(request.url);
   const status = url.searchParams.get('status') as TaskStatus | null;
   const assignee = url.searchParams.get('assignee');
-  const limit = parseInt(url.searchParams.get('limit') || '500', 10);
-  const offset = parseInt(url.searchParams.get('offset') || '0', 10);
+  const limit = Math.min(Math.max(1, parseInt(url.searchParams.get('limit') || '500', 10) || 500), 500);
+  const offset = Math.max(0, parseInt(url.searchParams.get('offset') || '0', 10) || 0);
 
   try {
-    const tasks = await loadTasksFromDb({
+    const { tasks, total } = await loadTasksFromDb({
       status: status ?? undefined,
       assignee: assignee ?? undefined,
       limit: Math.min(limit, 500),
       offset,
     });
-    return NextResponse.json({ tasks, total: tasks.length });
+    return NextResponse.json({ tasks, total });
   } catch (error) {
     console.error('Error loading tasks:', error);
     return NextResponse.json({ error: 'Failed to load tasks' }, { status: 500 });
