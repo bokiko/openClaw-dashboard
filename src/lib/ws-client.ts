@@ -56,8 +56,9 @@ export class WsClient {
       this.ws = new WebSocket(url);
 
       this.ws.onopen = () => {
-        this.setState('connected');
+        this.lastSeq = 0; // Reset on new connection — server seq restarts after restart
         this.reconnectDelay = 1000; // Reset backoff
+        this.setState('connected');
       };
 
       this.ws.onmessage = (event) => {

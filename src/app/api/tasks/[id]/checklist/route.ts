@@ -33,11 +33,15 @@ export async function POST(
   }
 }
 
-export async function PATCH(request: Request) {
+export async function PATCH(
+  request: Request,
+  { params }: { params: Promise<{ id: string }> },
+) {
   if (!isDbAvailable()) {
     return NextResponse.json({ error: 'Database not configured' }, { status: 503 });
   }
 
+  const { id: taskId } = await params;
   let body: { id: number; label?: string; checked?: boolean };
   try {
     body = await request.json();
@@ -48,7 +52,7 @@ export async function PATCH(request: Request) {
   if (!body.id) return NextResponse.json({ error: 'Item ID required' }, { status: 400 });
 
   try {
-    const updated = await updateChecklistItem(body.id, {
+    const updated = await updateChecklistItem(body.id, taskId, {
       label: body.label,
       checked: body.checked,
     });
@@ -59,17 +63,21 @@ export async function PATCH(request: Request) {
   }
 }
 
-export async function DELETE(request: Request) {
+export async function DELETE(
+  request: Request,
+  { params }: { params: Promise<{ id: string }> },
+) {
   if (!isDbAvailable()) {
     return NextResponse.json({ error: 'Database not configured' }, { status: 503 });
   }
 
+  const { id: taskId } = await params;
   const url = new URL(request.url);
   const itemId = parseInt(url.searchParams.get('itemId') || '', 10);
   if (!itemId) return NextResponse.json({ error: 'Item ID required' }, { status: 400 });
 
   try {
-    const deleted = await deleteChecklistItem(itemId);
+    const deleted = await deleteChecklistItem(itemId, taskId);
     return NextResponse.json({ ok: deleted });
   } catch (error) {
     console.error('Error deleting checklist item:', error);

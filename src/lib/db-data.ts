@@ -372,19 +372,21 @@ export async function addChecklistItem(taskId: string, label: string, sortOrder 
   return { id: r.id, taskId: r.task_id, label: r.label, checked: r.checked, sortOrder: r.sort_order };
 }
 
-export async function updateChecklistItem(id: number, updates: { label?: string; checked?: boolean }): Promise<boolean> {
+export async function updateChecklistItem(id: number, taskId: string, updates: { label?: string; checked?: boolean }): Promise<boolean> {
   const sets: string[] = [];
   const params: unknown[] = [];
   let idx = 1;
   if (updates.label !== undefined) { sets.push(`label = $${idx++}`); params.push(updates.label); }
   if (updates.checked !== undefined) { sets.push(`checked = $${idx++}`); params.push(updates.checked); }
   if (sets.length === 0) return false;
-  const result = await query(`UPDATE task_checklist SET ${sets.join(', ')} WHERE id = $${idx}`, [...params, id]);
+  // Scope update to the owning task to prevent cross-task IDOR
+  const result = await query(`UPDATE task_checklist SET ${sets.join(', ')} WHERE id = $${idx++} AND task_id = $${idx}`, [...params, id, taskId]);
   return (result.rowCount ?? 0) > 0;
 }
 
-export async function deleteChecklistItem(id: number): Promise<boolean> {
-  const result = await query(`DELETE FROM task_checklist WHERE id = $1`, [id]);
+export async function deleteChecklistItem(id: number, taskId: string): Promise<boolean> {
+  // Scope delete to the owning task to prevent cross-task IDOR
+  const result = await query(`DELETE FROM task_checklist WHERE id = $1 AND task_id = $2`, [id, taskId]);
   return (result.rowCount ?? 0) > 0;
 }
 
