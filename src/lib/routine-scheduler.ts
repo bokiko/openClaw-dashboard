@@ -1,5 +1,4 @@
-import { isDbAvailable, query } from '@/lib/db';
-import { createTask } from '@/lib/db-data';
+import { isDbAvailable, query, transaction } from '@/lib/db';
 import type { RoutineSchedule, CreateTaskInput } from '@/types';
 
 let schedulerInterval: ReturnType<typeof setInterval> | null = null;
@@ -35,31 +34,42 @@ async function tick(): Promise<void> {
        WHERE enabled = TRUE AND next_run_at <= NOW()`,
     );
 
-    for (const routine of result.rows) {
+    // Process all due routines concurrently; one failure must not block others
+    await Promise.allSettled(result.rows.map(async (routine) => {
       try {
-        // Create task from template
         const template = routine.task_template;
-        await createTask({
-          title: template.title || `[Routine] ${routine.name}`,
-          description: template.description,
-          status: template.status ?? 'inbox',
-          priority: template.priority ?? 2,
-          assigneeId: template.assigneeId ?? routine.agent_id ?? undefined,
-          tags: [...(template.tags ?? []), 'routine'],
-        });
-
-        // Update last_run_at and calculate next_run_at
         const nextRun = calculateNextRun(routine.schedule);
-        await query(
-          `UPDATE routines SET last_run_at = NOW(), next_run_at = $1, updated_at = NOW() WHERE id = $2`,
-          [nextRun, routine.id],
-        );
+
+        // Wrap INSERT + UPDATE in a transaction for atomicity so a failed UPDATE
+        // cannot leave an orphan task (createTask uses the pool directly and
+        // would escape the transaction boundary).
+        await transaction(async (client) => {
+          await client.query(
+            `INSERT INTO dashboard_tasks (id, title, description, status, priority, assignee_id, tags, parent_id)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+            [
+              crypto.randomUUID(),
+              template.title || `[Routine] ${routine.name}`,
+              template.description ?? '',
+              template.status ?? 'inbox',
+              template.priority ?? 2,
+              template.assigneeId ?? routine.agent_id ?? null,
+              [...(template.tags ?? []), 'routine'],
+              null,
+            ],
+          );
+
+          await client.query(
+            `UPDATE routines SET last_run_at = NOW(), next_run_at = $1, updated_at = NOW() WHERE id = $2`,
+            [nextRun, routine.id],
+          );
+        });
 
         console.log(`Routine "${routine.name}" fired, next run: ${nextRun?.toISOString() ?? 'never'}`);
       } catch (err) {
         console.error(`Routine "${routine.name}" failed:`, err instanceof Error ? err.message : err);
       }
-    }
+    }));
   } catch (err) {
     console.error('Scheduler tick failed:', err instanceof Error ? err.message : err);
   }

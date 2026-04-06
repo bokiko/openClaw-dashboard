@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { isDbAvailable } from '@/lib/db';
 import { loadTasksFromDb, createTask } from '@/lib/db-data';
+import { getSessionFromRequest } from '@/lib/auth';
 import type { TaskStatus, CreateTaskInput } from '@/types';
 
 export const dynamic = 'force-dynamic';
@@ -14,7 +15,7 @@ export async function GET(request: Request) {
   const status = url.searchParams.get('status') as TaskStatus | null;
   const assignee = url.searchParams.get('assignee');
   const limit = parseInt(url.searchParams.get('limit') || '500', 10);
-  const offset = parseInt(url.searchParams.get('offset') || '0', 10);
+  const offset = Math.max(0, parseInt(url.searchParams.get('offset') || '0', 10) || 0);
 
   try {
     const tasks = await loadTasksFromDb({
@@ -31,6 +32,12 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
+  // Second-layer session revocation check — middleware only verifies JWT signature.
+  const session = await getSessionFromRequest(request);
+  if (!session.valid) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
   if (!isDbAvailable()) {
     return NextResponse.json({ error: 'Database not configured' }, { status: 503 });
   }

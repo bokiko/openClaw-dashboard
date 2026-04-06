@@ -50,6 +50,10 @@ app.prepare().then(async () => {
       if (wss) wss.close();
     } catch { /* ws not loaded */ }
     try {
+      const { stopScheduler } = await import('./src/lib/routine-scheduler' as string);
+      stopScheduler();
+    } catch { /* scheduler not loaded */ }
+    try {
       const db = await import('./src/lib/db');
       await db.shutdown();
     } catch { /* db not loaded */ }

@@ -11,10 +11,10 @@ export async function GET(request: Request) {
 
   const url = new URL(request.url);
   const unreadOnly = url.searchParams.get('unread') === 'true';
-  const limit = parseInt(url.searchParams.get('limit') || '50', 10);
+  const safeLimit = Math.min(Math.max(1, parseInt(url.searchParams.get('limit') || '50', 10) || 50), 200);
 
   try {
-    const notifications = await getNotifications({ unreadOnly, limit });
+    const notifications = await getNotifications({ unreadOnly, limit: safeLimit });
     return NextResponse.json({ notifications });
   } catch (error) {
     console.error('Error loading notifications:', error);

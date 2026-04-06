@@ -1,5 +1,6 @@
 import { type ClassValue, clsx } from "clsx"
 import { twMerge } from "tailwind-merge"
+import type { Agent, Task } from '@/types'
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
@@ -46,4 +47,41 @@ export function formatUTC(epochMs: number): string {
   const hours = String(d.getUTCHours()).padStart(2, '0');
   const mins = String(d.getUTCMinutes()).padStart(2, '0');
   return `${year}-${month}-${day} ${hours}:${mins} UTC`;
+}
+
+// ── Agent Discovery ──────────────────────────────────────────────────
+
+export function sanitizeColor(color: string): string {
+  return /^#[0-9a-fA-F]{6}$/.test(color) ? color : '#697177';
+}
+
+const AGENT_PALETTE = [
+  '#46a758', '#3e63dd', '#8e4ec6', '#ffb224', '#e879a4',
+  '#00a2c7', '#e54d2e', '#f76b15', '#697177', '#30a46c',
+];
+
+export function discoverAgentsFromTasks(tasks: Task[]): Agent[] {
+  const ids = new Set<string>();
+  for (const task of tasks) {
+    if (task.assigneeId) ids.add(task.assigneeId);
+  }
+
+  const inProgressIds = new Set(
+    tasks.filter(t => t.status === 'in-progress').map(t => t.assigneeId).filter(Boolean),
+  );
+
+  let i = 0;
+  const agents: Agent[] = [];
+  for (const id of ids) {
+    agents.push({
+      id,
+      name: id.charAt(0).toUpperCase() + id.slice(1),
+      letter: id.charAt(0).toUpperCase(),
+      color: sanitizeColor(AGENT_PALETTE[i % AGENT_PALETTE.length]),
+      role: 'Agent',
+      status: inProgressIds.has(id) ? 'working' : 'idle',
+    });
+    i++;
+  }
+  return agents;
 }

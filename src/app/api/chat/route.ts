@@ -1,10 +1,18 @@
 import { NextResponse } from 'next/server';
 import { isDbAvailable, query } from '@/lib/db';
+import { getSessionFromRequest } from '@/lib/auth';
 import type { WsEventType } from '@/types';
 
 export const dynamic = 'force-dynamic';
 
 export async function POST(request: Request) {
+  // Second-layer session revocation check — middleware only verifies JWT signature
+  // (edge runtime cannot query the DB), so revoked sessions are caught here.
+  const session = await getSessionFromRequest(request);
+  if (!session.valid) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) {
     return NextResponse.json({ error: 'ANTHROPIC_API_KEY not configured' }, { status: 503 });
@@ -53,6 +61,11 @@ export async function POST(request: Request) {
         [body.agentId],
       );
       history = historyRes.rows.reverse();
+      // Ensure the current user message is always the last entry regardless of race conditions
+      const lastMsg = history[history.length - 1];
+      if (!lastMsg || lastMsg.role !== 'user' || lastMsg.content !== body.message.trim()) {
+        history.push({ role: 'user', content: body.message.trim() });
+      }
     } catch {
       // DB unavailable — fall through to single-message context
       history = [{ role: 'user', content: body.message.trim() }];
@@ -141,10 +154,14 @@ export async function POST(request: Request) {
         } finally {
           // Store assistant message
           if (isDbAvailable() && fullContent) {
-            await query(
-              `INSERT INTO chat_messages (agent_id, role, content) VALUES ($1, 'assistant', $2)`,
-              [body.agentId, fullContent],
-            );
+            try {
+              await query(
+                `INSERT INTO chat_messages (agent_id, role, content) VALUES ($1, 'assistant', $2)`,
+                [body.agentId, fullContent],
+              );
+            } catch (err) {
+              console.error('Failed to persist assistant message:', err instanceof Error ? err.message : err);
+            }
           }
 
           broadcast?.('chat:done', { agentId: body.agentId });

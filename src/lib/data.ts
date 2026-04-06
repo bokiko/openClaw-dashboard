@@ -1,7 +1,9 @@
-import { readFileSync, readdirSync, existsSync, statSync } from 'fs';
+import { readFileSync, existsSync } from 'fs';
+import { readFile, readdir, lstat } from 'fs/promises';
 import { join, resolve } from 'path';
 import type { Agent, Task, FeedItem, TaskStatus, Priority, TokenUsage, TokenStats } from '@/types';
 import { loadSettings, ACCENT_PRESETS, type DashboardSettings, type AccentColor } from '@/lib/settings';
+import { sanitizeColor, discoverAgentsFromTasks } from '@/lib/utils';
 
 function getTasksDir(): string {
   return process.env.OPENCLAW_TASKS_DIR || './tasks';
@@ -62,44 +64,6 @@ export function getClientSettings(): ClientSettings {
   };
 }
 
-// ── Color Validation ──────────────────────────────────────────────────
-function sanitizeColor(color: string): string {
-  return /^#[0-9a-fA-F]{6}$/.test(color) ? color : '#697177';
-}
-
-// ── Agent Color Palette ──────────────────────────────────────────────
-const AGENT_PALETTE = [
-  '#46a758', '#3e63dd', '#8e4ec6', '#ffb224', '#e879a4',
-  '#00a2c7', '#e54d2e', '#f76b15', '#697177', '#30a46c',
-];
-
-// ── Auto-Discover Agents ─────────────────────────────────────────────
-function discoverAgentsFromTasks(tasks: Task[]): Agent[] {
-  const ids = new Set<string>();
-  for (const task of tasks) {
-    if (task.assigneeId) ids.add(task.assigneeId);
-  }
-
-  const inProgressIds = new Set(
-    tasks.filter(t => t.status === 'in-progress').map(t => t.assigneeId).filter(Boolean)
-  );
-
-  let i = 0;
-  const agents: Agent[] = [];
-  for (const id of ids) {
-    agents.push({
-      id,
-      name: capitalize(id),
-      letter: id.charAt(0).toUpperCase(),
-      color: sanitizeColor(AGENT_PALETTE[i % AGENT_PALETTE.length]),
-      role: 'Agent',
-      status: inProgressIds.has(id) ? 'working' : 'idle',
-    });
-    i++;
-  }
-
-  return agents;
-}
 
 // ── Get Agents ───────────────────────────────────────────────────────
 export function getAgents(tasks?: Task[]): Agent[] {
@@ -232,19 +196,22 @@ const TASKS_CACHE_TTL = 5000; // re-read from disk every 5s at most
 /** @internal — test only */
 export function _resetTasksCache() { _tasksCache = null; _tasksCachedAt = 0; }
 
-export function loadTasks(): Task[] {
+export async function loadTasks(): Promise<Task[]> {
   const now = Date.now();
   if (_tasksCache && (now - _tasksCachedAt) < TASKS_CACHE_TTL) return _tasksCache;
 
   const tasksDir = getTasksDir();
+  const resolvedDir = resolve(tasksDir);
 
-  if (!existsSync(tasksDir)) {
+  let allFiles: string[];
+  try {
+    allFiles = await readdir(tasksDir);
+  } catch {
     console.warn('Tasks directory not found:', tasksDir);
     return [];
   }
 
-  const resolvedDir = resolve(tasksDir);
-  const files = readdirSync(tasksDir).filter(f => f.endsWith('.json'));
+  const files = allFiles.filter((f: string) => f.endsWith('.json'));
   const tasks: Task[] = [];
 
   for (const file of files) {
@@ -255,13 +222,17 @@ export function loadTasks(): Task[] {
         continue;
       }
 
-      const stats = statSync(fullPath);
+      const stats = await lstat(fullPath);
+      if (stats.isSymbolicLink()) {
+        console.warn('Skipping symlink:', file);
+        continue;
+      }
       if (stats.size > 1_048_576) {
         console.warn(`Skipping oversized task file: ${file} (${stats.size} bytes)`);
         continue;
       }
 
-      const content = readFileSync(fullPath, 'utf-8');
+      const content = await readFile(fullPath, 'utf-8');
       const raw = JSON.parse(content);
 
       // Skip non-task files (arrays like feed-items.json, or objects without title)

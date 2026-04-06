@@ -15,23 +15,29 @@ export async function GET(
   }
 
   const { id } = await params;
-  const result = await query(`SELECT * FROM routines WHERE id = $1`, [id]);
-  if (result.rows.length === 0) return NextResponse.json({ error: 'Not found' }, { status: 404 });
 
-  const r = result.rows[0] as {
-    id: string; name: string; description: string; agent_id: string | null;
-    schedule: RoutineSchedule; enabled: boolean; last_run_at: Date | null;
-    next_run_at: Date | null; task_template: CreateTaskInput;
-    created_at: Date; updated_at: Date;
-  };
+  try {
+    const result = await query(`SELECT * FROM routines WHERE id = $1`, [id]);
+    if (result.rows.length === 0) return NextResponse.json({ error: 'Not found' }, { status: 404 });
 
-  return NextResponse.json({
-    id: r.id, name: r.name, description: r.description,
-    agentId: r.agent_id, schedule: r.schedule, enabled: r.enabled,
-    lastRunAt: r.last_run_at?.getTime(), nextRunAt: r.next_run_at?.getTime(),
-    taskTemplate: r.task_template,
-    createdAt: r.created_at.getTime(), updatedAt: r.updated_at.getTime(),
-  });
+    const r = result.rows[0] as {
+      id: string; name: string; description: string; agent_id: string | null;
+      schedule: RoutineSchedule; enabled: boolean; last_run_at: Date | null;
+      next_run_at: Date | null; task_template: CreateTaskInput;
+      created_at: Date; updated_at: Date;
+    };
+
+    return NextResponse.json({
+      id: r.id, name: r.name, description: r.description,
+      agentId: r.agent_id, schedule: r.schedule, enabled: r.enabled,
+      lastRunAt: r.last_run_at?.getTime(), nextRunAt: r.next_run_at?.getTime(),
+      taskTemplate: r.task_template,
+      createdAt: r.created_at.getTime(), updatedAt: r.updated_at.getTime(),
+    });
+  } catch (error) {
+    console.error('Error fetching routine:', error);
+    return NextResponse.json({ error: 'Failed to fetch routine' }, { status: 500 });
+  }
 }
 
 export async function PATCH(
@@ -45,6 +51,33 @@ export async function PATCH(
   const { id } = await params;
   let body: { name?: string; description?: string; agentId?: string | null; schedule?: RoutineSchedule; enabled?: boolean; taskTemplate?: CreateTaskInput };
   try { body = await request.json(); } catch { return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 }); }
+
+  // SEC-007: Validate name and taskTemplate to prevent resource exhaustion.
+  if (body.name !== undefined) {
+    if (typeof body.name !== 'string' || body.name.length > 200) {
+      return NextResponse.json({ error: 'name must be a string under 200 characters' }, { status: 400 });
+    }
+  }
+
+  if (body.taskTemplate !== undefined) {
+    const t = body.taskTemplate;
+    const VALID_STATUSES = new Set(['inbox', 'assigned', 'in-progress', 'review', 'waiting', 'done']);
+    if (!t.title || typeof t.title !== 'string' || t.title.trim().length === 0 || t.title.length > 500) {
+      return NextResponse.json({ error: 'taskTemplate.title must be a non-empty string under 500 chars' }, { status: 400 });
+    }
+    if (t.description !== undefined && (typeof t.description !== 'string' || t.description.length > 10000)) {
+      return NextResponse.json({ error: 'taskTemplate.description must be a string under 10000 chars' }, { status: 400 });
+    }
+    if (t.status !== undefined && !VALID_STATUSES.has(t.status)) {
+      return NextResponse.json({ error: 'taskTemplate.status is invalid' }, { status: 400 });
+    }
+    if (t.priority !== undefined && ![0, 1, 2].includes(t.priority as number)) {
+      return NextResponse.json({ error: 'taskTemplate.priority must be 0, 1, or 2' }, { status: 400 });
+    }
+    if (t.tags !== undefined && (!Array.isArray(t.tags) || t.tags.some(tag => typeof tag !== 'string'))) {
+      return NextResponse.json({ error: 'taskTemplate.tags must be an array of strings' }, { status: 400 });
+    }
+  }
 
   const sets: string[] = ['updated_at = NOW()'];
   const values: unknown[] = [];
@@ -80,9 +113,15 @@ export async function DELETE(
 ) {
   if (!isDbAvailable()) return NextResponse.json({ error: 'Database not configured' }, { status: 503 });
   const { id } = await params;
-  const result = await query(`DELETE FROM routines WHERE id = $1`, [id]);
-  if ((result.rowCount ?? 0) === 0) return NextResponse.json({ error: 'Not found' }, { status: 404 });
-  return NextResponse.json({ ok: true });
+
+  try {
+    const result = await query(`DELETE FROM routines WHERE id = $1`, [id]);
+    if ((result.rowCount ?? 0) === 0) return NextResponse.json({ error: 'Not found' }, { status: 404 });
+    return NextResponse.json({ ok: true });
+  } catch (error) {
+    console.error('Error deleting routine:', error);
+    return NextResponse.json({ error: 'Failed to delete routine' }, { status: 500 });
+  }
 }
 
 // POST = manual trigger

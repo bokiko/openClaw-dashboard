@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { cn, timeAgo, formatNumber, formatTokens, formatUTC } from '@/lib/utils';
+import { cn, timeAgo, formatNumber, formatTokens, formatUTC, discoverAgentsFromTasks, sanitizeColor } from '@/lib/utils';
+import type { Task } from '@/types';
 
 // ── cn ───────────────────────────────────────────────────────────────
 
@@ -145,5 +146,72 @@ describe('formatUTC', () => {
   it('handles end-of-day correctly', () => {
     const epoch = Date.UTC(2026, 11, 31, 23, 59, 0);
     expect(formatUTC(epoch)).toBe('2026-12-31 23:59 UTC');
+  });
+});
+
+// ── sanitizeColor ────────────────────────────────────────────────────
+
+describe('sanitizeColor', () => {
+  it('accepts valid 6-digit hex colors', () => {
+    expect(sanitizeColor('#46a758')).toBe('#46a758');
+    expect(sanitizeColor('#FFFFFF')).toBe('#FFFFFF');
+  });
+
+  it('returns fallback for invalid colors', () => {
+    expect(sanitizeColor('red')).toBe('#697177');
+    expect(sanitizeColor('#fff')).toBe('#697177');
+    expect(sanitizeColor('')).toBe('#697177');
+  });
+});
+
+// ── discoverAgentsFromTasks ──────────────────────────────────────────
+
+function makeTask(overrides: Partial<Task>): Task {
+  return {
+    id: 'task-1', title: 'Test', status: 'pending', priority: 'medium',
+    createdAt: Date.now(), updatedAt: Date.now(),
+    ...overrides,
+  } as Task;
+}
+
+describe('discoverAgentsFromTasks', () => {
+  it('returns empty array for empty task list', () => {
+    expect(discoverAgentsFromTasks([])).toEqual([]);
+  });
+
+  it('returns empty array when no tasks have assignees', () => {
+    expect(discoverAgentsFromTasks([makeTask({})])).toEqual([]);
+  });
+
+  it('returns one agent per unique assigneeId', () => {
+    const tasks = [
+      makeTask({ assigneeId: 'alice' }),
+      makeTask({ assigneeId: 'bob' }),
+      makeTask({ assigneeId: 'alice' }),
+    ];
+    const agents = discoverAgentsFromTasks(tasks);
+    expect(agents).toHaveLength(2);
+    expect(agents.map(a => a.id)).toEqual(['alice', 'bob']);
+  });
+
+  it('sets status to "working" for agents with in-progress tasks', () => {
+    const tasks = [
+      makeTask({ assigneeId: 'alice', status: 'in-progress' }),
+      makeTask({ assigneeId: 'bob', status: 'inbox' }),
+    ];
+    const agents = discoverAgentsFromTasks(tasks);
+    expect(agents.find(a => a.id === 'alice')?.status).toBe('working');
+    expect(agents.find(a => a.id === 'bob')?.status).toBe('idle');
+  });
+
+  it('capitalizes the agent name from assigneeId', () => {
+    const agents = discoverAgentsFromTasks([makeTask({ assigneeId: 'alice' })]);
+    expect(agents[0].name).toBe('Alice');
+    expect(agents[0].letter).toBe('A');
+  });
+
+  it('assigns a valid hex color from the palette', () => {
+    const agents = discoverAgentsFromTasks([makeTask({ assigneeId: 'alice' })]);
+    expect(agents[0].color).toMatch(/^#[0-9a-fA-F]{6}$/);
   });
 });

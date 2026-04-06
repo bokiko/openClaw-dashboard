@@ -9,13 +9,17 @@ export async function GET(
 ) {
   const { agentId } = await params;
 
+  if (!/^[a-zA-Z0-9_-]{1,64}$/.test(agentId)) {
+    return NextResponse.json({ error: 'Invalid agentId' }, { status: 400 });
+  }
+
   if (!isDbAvailable()) {
     return NextResponse.json({ messages: [] });
   }
 
   const url = new URL(request.url);
-  const limit = parseInt(url.searchParams.get('limit') || '50', 10);
-  const offset = parseInt(url.searchParams.get('offset') || '0', 10);
+  const limit = Math.max(1, Math.min(parseInt(url.searchParams.get('limit') || '50', 10) || 50, 100));
+  const offset = Math.max(0, Math.min(parseInt(url.searchParams.get('offset') || '0', 10) || 0, 10000));
 
   try {
     const result = await query<{
@@ -25,7 +29,7 @@ export async function GET(
       `SELECT id, agent_id, role, content, metadata, created_at
        FROM chat_messages WHERE agent_id = $1
        ORDER BY created_at DESC LIMIT $2 OFFSET $3`,
-      [agentId, Math.min(limit, 100), offset],
+      [agentId, limit, offset],
     );
 
     const messages = result.rows.reverse().map(r => ({

@@ -2,7 +2,10 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { jwtVerify } from 'jose';
 
-const PUBLIC_PATHS = ['/login', '/_next', '/favicon.ico', '/api/health', '/api/auth'];
+// Note: '/_next/static' and '/_next/image' are already excluded by the matcher config below.
+// Do NOT add '/_next' here — that would also bypass auth for '_next/data' routes which contain
+// page props and potentially sensitive data.
+const PUBLIC_PATHS = ['/login', '/favicon.ico', '/api/health', '/api/auth/login', '/api/auth/logout'];
 
 function getSecret(): Uint8Array | null {
   // Mirror auth.ts: JWT_SECRET takes precedence, fall back to DASHBOARD_SECRET

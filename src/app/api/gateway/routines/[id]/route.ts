@@ -69,6 +69,22 @@ export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ 
 function buildCronExpr(schedule: { hour?: number; minute?: number; daysOfWeek?: number[] }): string {
   const minute = schedule?.minute ?? 0;
   const hour = schedule?.hour ?? 9;
-  const dow = schedule?.daysOfWeek?.join(',') || '*';
+  const daysOfWeek = schedule?.daysOfWeek;
+
+  if (!Number.isInteger(minute) || minute < 0 || minute > 59) {
+    throw new Error(`Invalid minute value: ${minute}`);
+  }
+  if (!Number.isInteger(hour) || hour < 0 || hour > 23) {
+    throw new Error(`Invalid hour value: ${hour}`);
+  }
+  if (daysOfWeek !== undefined) {
+    for (const d of daysOfWeek) {
+      if (!Number.isInteger(d) || d < 0 || d > 6) {
+        throw new Error(`Invalid daysOfWeek value: ${d}`);
+      }
+    }
+  }
+
+  const dow = daysOfWeek && daysOfWeek.length > 0 ? daysOfWeek.join(',') : '*';
   return `${minute} ${hour} * * ${dow}`;
 }

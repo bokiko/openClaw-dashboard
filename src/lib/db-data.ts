@@ -1,4 +1,5 @@
 import { query, transaction } from '@/lib/db';
+import { discoverAgentsFromTasks } from '@/lib/utils';
 import type {
   Agent, Task, FeedItem, TaskStatus, Priority, TokenStats,
   TaskDetail, ChecklistItem, TaskComment, TaskDeliverable,
@@ -210,38 +211,7 @@ export async function getAgentsFromDb(tasks?: Task[]): Promise<Agent[]> {
   }
 
   // Auto-discover from tasks (same as file-mode logic)
-  return discoverAgentsFromTasksDb(tasks ?? []);
-}
-
-const AGENT_PALETTE = [
-  '#46a758', '#3e63dd', '#8e4ec6', '#ffb224', '#e879a4',
-  '#00a2c7', '#e54d2e', '#f76b15', '#697177', '#30a46c',
-];
-
-function discoverAgentsFromTasksDb(tasks: Task[]): Agent[] {
-  const ids = new Set<string>();
-  for (const task of tasks) {
-    if (task.assigneeId) ids.add(task.assigneeId);
-  }
-
-  const inProgressIds = new Set(
-    tasks.filter(t => t.status === 'in-progress').map(t => t.assigneeId).filter(Boolean),
-  );
-
-  let i = 0;
-  const agents: Agent[] = [];
-  for (const id of ids) {
-    agents.push({
-      id,
-      name: id.charAt(0).toUpperCase() + id.slice(1),
-      letter: id.charAt(0).toUpperCase(),
-      color: AGENT_PALETTE[i % AGENT_PALETTE.length],
-      role: 'Agent',
-      status: inProgressIds.has(id) ? 'working' : 'idle',
-    });
-    i++;
-  }
-  return agents;
+  return discoverAgentsFromTasks(tasks ?? []);
 }
 
 // ── Feed ────────────────────────────────────────────────────────────
@@ -307,40 +277,37 @@ export async function getStatsFromDb(): Promise<{
 }
 
 export async function getTokenStatsFromDb(): Promise<TokenStats | null> {
-  // Use the existing token_usage table from 001 migration
-  const result = await query<{
-    total_input: string; total_output: string;
-  }>(`SELECT COALESCE(SUM(input_tokens), 0)::text as total_input,
-             COALESCE(SUM(output_tokens), 0)::text as total_output
-      FROM token_usage`);
+  // Run all three aggregation queries in parallel (PERF-001).
+  // totalInput/totalOutput are derived from byModel to eliminate a fourth query.
+  const [byModelRes, byDateRes, byAgentRes] = await Promise.all([
+    query<{ model: string; input: string; output: string }>(
+      `SELECT COALESCE(model, 'unknown') as model,
+              SUM(input_tokens)::text as input,
+              SUM(output_tokens)::text as output
+       FROM token_usage GROUP BY model`,
+    ),
+    query<{ date: string; input: string; output: string }>(
+      `SELECT created_at::date::text as date,
+              SUM(input_tokens)::text as input,
+              SUM(output_tokens)::text as output
+       FROM token_usage GROUP BY created_at::date ORDER BY date`,
+    ),
+    query<{ agent: string; input: string; output: string }>(
+      `SELECT COALESCE(session_id, 'unknown') as agent,
+              SUM(input_tokens)::text as input,
+              SUM(output_tokens)::text as output
+       FROM token_usage GROUP BY session_id`,
+    ),
+  ]);
 
-  const totalInput = parseInt(result.rows[0].total_input, 10);
-  const totalOutput = parseInt(result.rows[0].total_output, 10);
+  // Derive totals from byModel results — avoids a separate aggregation query.
+  let totalInput = 0;
+  let totalOutput = 0;
+  for (const row of byModelRes.rows) {
+    totalInput += parseInt(row.input, 10);
+    totalOutput += parseInt(row.output, 10);
+  }
   if (totalInput === 0 && totalOutput === 0) return null;
-
-  // By model
-  const byModelRes = await query<{ model: string; input: string; output: string }>(
-    `SELECT COALESCE(model, 'unknown') as model,
-            SUM(input_tokens)::text as input,
-            SUM(output_tokens)::text as output
-     FROM token_usage GROUP BY model`,
-  );
-
-  // By date
-  const byDateRes = await query<{ date: string; input: string; output: string }>(
-    `SELECT created_at::date::text as date,
-            SUM(input_tokens)::text as input,
-            SUM(output_tokens)::text as output
-     FROM token_usage GROUP BY created_at::date ORDER BY date`,
-  );
-
-  // By session (as proxy for agent)
-  const byAgentRes = await query<{ agent: string; input: string; output: string }>(
-    `SELECT COALESCE(session_id, 'unknown') as agent,
-            SUM(input_tokens)::text as input,
-            SUM(output_tokens)::text as output
-     FROM token_usage GROUP BY session_id`,
-  );
 
   const tokensByAgent: Record<string, { input: number; output: number }> = {};
   for (const row of byAgentRes.rows) {

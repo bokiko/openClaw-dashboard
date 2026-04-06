@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import fs from 'fs';
+import { readFile, access } from 'fs/promises';
 import path from 'path';
 
 export const dynamic = 'force-dynamic';
@@ -19,11 +19,32 @@ const CHANNEL_NAMES: Record<string, string> = {
   signal: 'Signal',
 };
 
+// TTL cache: avoid hitting gateway on every poll when it is down.
+// Cache the plain data object — NextResponse bodies can only be consumed once,
+// so returning the same Response instance for cached hits yields empty responses.
+const CACHE_TTL_MS = 30_000;
+let _cachedData: Record<string, unknown> | null = null;
+let _cachedAt = 0;
+
 export async function GET() {
   const now = Date.now();
 
+  if (_cachedData && now - _cachedAt < CACHE_TTL_MS) {
+    return NextResponse.json(_cachedData);
+  }
+
   try {
-    const raw = fs.readFileSync(CONFIG_PATH, 'utf-8');
+    // Verify config file exists before reading
+    try {
+      await access(CONFIG_PATH);
+    } catch {
+      return NextResponse.json(
+        { error: 'OpenClaw config not found', timestamp: now },
+        { status: 404 },
+      );
+    }
+
+    const raw = await readFile(CONFIG_PATH, 'utf-8');
     const config = JSON.parse(raw);
     const rawToken = config?.gateway?.auth?.token;
     const token = typeof rawToken === 'string' ? rawToken : '';
@@ -73,7 +94,7 @@ export async function GET() {
       };
     });
 
-    return NextResponse.json({
+    const responseData = {
       channels: channelList,
       gateway: {
         status: gatewayOnline ? 'online' : 'offline',
@@ -81,7 +102,11 @@ export async function GET() {
         uptime: gatewayInfo.uptime,
       },
       timestamp: now,
-    });
+    };
+
+    _cachedData = responseData;
+    _cachedAt = now;
+    return NextResponse.json(responseData);
   } catch (err) {
     console.error('Channel monitor error:', err instanceof Error ? err.message : err);
     return NextResponse.json(

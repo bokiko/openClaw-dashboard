@@ -25,6 +25,14 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    if (typeof agentId !== 'string' || !/^[a-zA-Z0-9_-]{1,64}$/.test(agentId)) {
+      return NextResponse.json({ error: 'Invalid agentId' }, { status: 400 });
+    }
+
+    if (typeof message !== 'string' || message.length > 10000) {
+      return NextResponse.json({ error: 'Message too long (max 10000 characters)' }, { status: 400 });
+    }
+
     const gw = getGatewayClient();
     const res = await gw.call<ChatResponse>('chat.send', {
       agentId,

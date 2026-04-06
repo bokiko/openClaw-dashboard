@@ -35,7 +35,7 @@ afterEach(() => {
 // ── loadTasks ─────────────────────────────────────────────────────────
 
 describe('loadTasks', () => {
-  it('parses a valid task JSON into a Task object', () => {
+  it('parses a valid task JSON into a Task object', async () => {
     writeTask(tmpDir, 'task-1.json', {
       id: 'task-1',
       title: 'Build dashboard',
@@ -47,7 +47,7 @@ describe('loadTasks', () => {
       created_at: '2026-01-15T10:00:00Z',
     });
 
-    const tasks = loadTasks();
+    const tasks = await loadTasks();
     expect(tasks).toHaveLength(1);
 
     const t = tasks[0];
@@ -61,7 +61,7 @@ describe('loadTasks', () => {
     expect(t.createdAt).toBe(new Date('2026-01-15T10:00:00Z').getTime());
   });
 
-  it('maps various status strings correctly', () => {
+  it('maps various status strings correctly', async () => {
     const statusTests: [string, string][] = [
       ['complete', 'done'],
       ['completed', 'done'],
@@ -89,14 +89,14 @@ describe('loadTasks', () => {
       process.env.OPENCLAW_TASKS_DIR = dir;
 
       writeTask(dir, 'test.json', { title: 'T', status: input });
-      const tasks = loadTasks();
+      const tasks = await loadTasks();
       expect(tasks[0].status).toBe(expected);
 
       try { rmSync(dir, { recursive: true, force: true }); } catch { /* ok */ }
     }
   });
 
-  it('maps priority strings correctly', () => {
+  it('maps priority strings correctly', async () => {
     const priorityTests: [string, number][] = [
       ['urgent', 0],
       ['p0', 0],
@@ -113,14 +113,14 @@ describe('loadTasks', () => {
       process.env.OPENCLAW_TASKS_DIR = dir;
 
       writeTask(dir, 'test.json', { title: 'T', priority: input });
-      const tasks = loadTasks();
+      const tasks = await loadTasks();
       expect(tasks[0].priority).toBe(expected);
 
       try { rmSync(dir, { recursive: true, force: true }); } catch { /* ok */ }
     }
   });
 
-  it('skips non-task files (arrays, objects without title)', () => {
+  it('skips non-task files (arrays, objects without title)', async () => {
     // Array file (like feed-items.json)
     writeFileSync(join(tmpDir, 'feed-items.json'), JSON.stringify([{ id: '1' }]));
     // Object without title
@@ -128,41 +128,41 @@ describe('loadTasks', () => {
     // Valid task
     writeTask(tmpDir, 'real.json', { title: 'Real Task' });
 
-    const tasks = loadTasks();
+    const tasks = await loadTasks();
     expect(tasks).toHaveLength(1);
     expect(tasks[0].title).toBe('Real Task');
   });
 
-  it('skips oversized files (>1MB)', () => {
+  it('skips oversized files (>1MB)', async () => {
     writeTask(tmpDir, 'valid.json', { title: 'Small Task' });
     // Write a file > 1MB
     const bigContent = JSON.stringify({ title: 'Big Task', data: 'x'.repeat(1_100_000) });
     writeFileSync(join(tmpDir, 'big.json'), bigContent);
 
-    const tasks = loadTasks();
+    const tasks = await loadTasks();
     expect(tasks).toHaveLength(1);
     expect(tasks[0].title).toBe('Small Task');
   });
 
-  it('returns empty array when TASKS_DIR does not exist', () => {
+  it('returns empty array when TASKS_DIR does not exist', async () => {
     process.env.OPENCLAW_TASKS_DIR = '/tmp/nonexistent-dir-openclaw-test';
     _resetTasksCache();
 
-    const tasks = loadTasks();
+    const tasks = await loadTasks();
     expect(tasks).toEqual([]);
   });
 
-  it('cache: second call within 5s returns same reference', () => {
+  it('cache: second call within 5s returns same reference', async () => {
     writeTask(tmpDir, 'task.json', { title: 'Cached' });
 
-    const first = loadTasks();
-    const second = loadTasks();
+    const first = await loadTasks();
+    const second = await loadTasks();
     expect(first).toBe(second); // same reference
   });
 
   it('cache: call after TTL returns fresh data', async () => {
     writeTask(tmpDir, 'task.json', { title: 'V1' });
-    const first = loadTasks();
+    const first = await loadTasks();
     expect(first[0].title).toBe('V1');
 
     // Force cache expiry by resetting
@@ -170,29 +170,29 @@ describe('loadTasks', () => {
 
     // Write updated file
     writeTask(tmpDir, 'task.json', { title: 'V2' });
-    const second = loadTasks();
+    const second = await loadTasks();
     expect(second[0].title).toBe('V2');
     expect(first).not.toBe(second);
   });
 
-  it('extracts assignee from deliverables array', () => {
+  it('extracts assignee from deliverables array', async () => {
     writeTask(tmpDir, 'task.json', {
       title: 'Delegated',
       deliverables: [{ assignee: 'spark', task: 'write code' }],
     });
 
-    const tasks = loadTasks();
+    const tasks = await loadTasks();
     expect(tasks[0].assigneeId).toBe('spark');
   });
 
-  it('extracts tags from type field when no tags array', () => {
+  it('extracts tags from type field when no tags array', async () => {
     writeTask(tmpDir, 'task.json', { title: 'Typed', type: 'bug' });
 
-    const tasks = loadTasks();
+    const tasks = await loadTasks();
     expect(tasks[0].tags).toEqual(['bug']);
   });
 
-  it('parses token usage data', () => {
+  it('parses token usage data', async () => {
     writeTask(tmpDir, 'task.json', {
       title: 'With Usage',
       usage: [
@@ -201,7 +201,7 @@ describe('loadTasks', () => {
       ],
     });
 
-    const tasks = loadTasks();
+    const tasks = await loadTasks();
     expect(tasks[0].usage).toHaveLength(2);
     expect(tasks[0].usage![0].inputTokens).toBe(1000);
     expect(tasks[0].usage![0].model).toBe('claude-3');
@@ -212,7 +212,7 @@ describe('loadTasks', () => {
 // ── generateFeed ──────────────────────────────────────────────────────
 
 describe('generateFeed', () => {
-  it('generates feed items from task statuses', () => {
+  it('generates feed items from task statuses', async () => {
     writeTask(tmpDir, 'done.json', {
       title: 'Done Task',
       status: 'done',
@@ -231,7 +231,7 @@ describe('generateFeed', () => {
       created_at: '2026-01-15T10:00:00Z',
     });
 
-    const tasks = loadTasks();
+    const tasks = await loadTasks();
     const feed = generateFeed(tasks);
 
     // Should have status item + 3 task items = 4 minimum
@@ -253,7 +253,7 @@ describe('generateFeed', () => {
     expect(reviewItem!.title).toContain('submitted for review');
   });
 
-  it('merges feed-items.json when present', () => {
+  it('merges feed-items.json when present', async () => {
     writeTask(tmpDir, 'task.json', { title: 'A Task', status: 'done', completed_at: '2026-01-15T12:00:00Z' });
     writeFileSync(
       join(tmpDir, 'feed-items.json'),
@@ -262,7 +262,7 @@ describe('generateFeed', () => {
       ])
     );
 
-    const tasks = loadTasks();
+    const tasks = await loadTasks();
     const feed = generateFeed(tasks);
 
     const memoryItem = feed.find(f => f.id === 'ext-1');
@@ -270,7 +270,7 @@ describe('generateFeed', () => {
     expect(memoryItem!.type).toBe('decision'); // memory → decision
   });
 
-  it('caps feed at 15 items', () => {
+  it('caps feed at 15 items', async () => {
     // Create 20 tasks to generate many feed items
     for (let i = 0; i < 20; i++) {
       writeTask(tmpDir, `task-${i}.json`, {
@@ -281,15 +281,15 @@ describe('generateFeed', () => {
     }
 
     _resetTasksCache();
-    const tasks = loadTasks();
+    const tasks = await loadTasks();
     const feed = generateFeed(tasks);
     expect(feed.length).toBeLessThanOrEqual(15);
   });
 
-  it('includes status-now item at the top after sort', () => {
+  it('includes status-now item at the top after sort', async () => {
     writeTask(tmpDir, 'task.json', { title: 'T', status: 'inbox' });
 
-    const tasks = loadTasks();
+    const tasks = await loadTasks();
     const feed = generateFeed(tasks);
 
     const statusItem = feed.find(f => f.id === 'status-now');

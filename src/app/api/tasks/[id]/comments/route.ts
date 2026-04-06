@@ -44,7 +44,8 @@ export async function POST(
   }
 
   try {
-    const comment = await addComment(id, body.content.trim(), body.author);
+    // Do not forward body.author — always use the default 'operator' to prevent impersonation.
+    const comment = await addComment(id, body.content.trim());
     return NextResponse.json(comment, { status: 201 });
   } catch (error) {
     console.error('Error adding comment:', error);
